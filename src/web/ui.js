@@ -167,7 +167,14 @@ function drawNotes(i){
       B.COURSES[ci].notes.splice(ni,1); drawNotes(ci); live(); }
   };
 }
-function live(){ if($("#outCard").style.display==="block") build(); }
+/* A note field calls this on every keystroke, and build() re-renders every week
+   in the range — 42 full tables for the whole year. Coalesce the bursts. */
+let liveTimer=null;
+function live(){
+  if($("#outCard").style.display!=="block") return;
+  clearTimeout(liveTimer);
+  liveTimer=setTimeout(build,250);
+}
 
 /* The glance is one column per rotation day, so it needs a date to decide which
    semester's courses to show. Passing null silently meant Semester 1 forever —
@@ -223,22 +230,27 @@ function weekMondays(mode){
   const first=B.mkDate(D.firstMonday), last=B.mkDate(D.lastMonday), out=[];
   for(let m=first;m<=last;m=B.addDays(m,7)) out.push(m);
   const today=todayISO();
-  const onOrAfter = out.filter(m=>B.iso(B.addDays(m,6))>=today);
-  const current   = out.filter(m=>B.iso(m)<=today && today<=B.iso(B.addDays(m,6)));
+  const endsOnOrAfter = m => B.iso(B.addDays(m,6))>=today;
+  /* The week the year is at right now: the one containing today, else the next
+     one up, else — once the whole year is behind us — the last one. Every
+     relative range is measured from this. Falling back to out[0] instead meant
+     that opening the tool in July 2027 and asking for "this week only" printed
+     the week of September 14, 2026. */
+  let anchor=out.findIndex(m=>B.iso(m)<=today && endsOnOrAfter(m));
+  if(anchor<0) anchor=out.findIndex(endsOnOrAfter);
+  if(anchor<0) anchor=out.length-1;
+
   if(mode==="sem1")      return out.filter(m=>B.iso(m)<D.sem2Start);
   if(mode==="sem2")      return out.filter(m=>B.iso(B.addDays(m,4))>=D.sem2Start);
-  if(mode==="next4")     return (onOrAfter.length?onOrAfter:out).slice(0,4);
-  if(mode==="rest")      return onOrAfter.length?onOrAfter:out;
-  if(mode==="thisweek")  return current.length?current:(onOrAfter.length?[onOrAfter[0]]:[out[0]]);
-  if(mode==="lastweek"){
-    const i=out.findIndex(m=>B.iso(m)===B.iso(current[0]||onOrAfter[0]||out[0]));
-    return [out[Math.max(0,i-1)]];
-  }
+  if(mode==="thisweek")  return [out[anchor]];
+  if(mode==="lastweek")  return [out[Math.max(0,anchor-1)]];
+  if(mode==="next4")     return out.slice(anchor,anchor+4);
+  if(mode==="rest")      return out.slice(anchor);
   if(mode==="thismonth"){
-    const y=now.getFullYear(), mo=now.getMonth();
+    const t=B.mkDate(today), y=t.getUTCFullYear(), mo=t.getUTCMonth();
     const inMonth=out.filter(m=>[0,1,2,3,4].some(i=>{const d=B.addDays(m,i);
       return d.getUTCFullYear()===y && d.getUTCMonth()===mo;}));
-    return inMonth.length?inMonth:(onOrAfter.length?onOrAfter.slice(0,4):out.slice(0,4));
+    return inMonth.length?inMonth:[out[anchor]];
   }
   return out;
 }

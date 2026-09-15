@@ -3,10 +3,17 @@
 # Pages cannot serve an arbitrary folder when deploying from a branch — only the
 # repo root or /docs — and /docs here holds district-sources.md, not the site.
 # So the site is uploaded as an artifact instead, and site/ stays where it is.
+#
+# The checks run on pull requests as well as on main. On main alone a failure
+# aborts the deploy and Pages keeps serving the previous build, which leaves the
+# branch broken and the live site quietly out of step with it. Running them on
+# the PR is what actually stops a stale page from landing.
 name: Deploy site to GitHub Pages
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -20,11 +27,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,6 +67,17 @@ jobs:
           python build.py ../students/example.py
           python verify.py | tee /tmp/verify.out
           grep -q 'TOTAL ERRORS: 0' /tmp/verify.out
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
