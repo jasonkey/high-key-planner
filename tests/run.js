@@ -206,7 +206,67 @@ async function testRanges() {
   const txt = d.getElementById("printArea").textContent;
   ok("the Jun 28 snow make-up week has a page", txt.includes("June 28, 2027"));
   ok("it is marked as a make-up day", txt.includes("SNOW MAKE-UP"));
-  ok("the whole year is 42 pages", /42 pages/.test($("#outInfo").textContent), $("#outInfo").textContent);
+  ok("the whole year plus the calendar page is 43", /43 pages/.test($("#outInfo").textContent),
+    $("#outInfo").textContent);
+  $("#yearcal").checked = false; $("#btnBuild").click(); await pause(600);
+  ok("without the calendar it is 42", /42 pages/.test($("#outInfo").textContent),
+    $("#outInfo").textContent);
+}
+
+async function testYearCalendar() {
+  suite("year at a glance");
+  const { d, $ } = await load();
+  $("#paste").value = DEMO_ROW; $("#btnParse").click(); await pause();
+  $("#range").value = "thisweek"; $("#btnBuild").click(); await pause(500);
+
+  const page = d.querySelector("#printArea .wk");
+  ok("the calendar is the first printed page", !!page && !!page.querySelector(".ycgrid"));
+  const months = d.querySelectorAll("#printArea .ycmonth");
+  ok("ten months, September to June", months.length === 10, months.length + " months");
+  ok("weekday columns only", [...d.querySelectorAll("#printArea .ycmonth")][0]
+    .querySelectorAll("thead th").length === 5);
+
+  /* Derived from the district data rather than hard-coded, so these stay true
+     when the calendar year changes. Scoped to the grid: the legend has a .ycd
+     swatch of its own. */
+  const DD = d.defaultView.__DISTRICT__;
+  const schoolDays = Object.keys(DD.dayNum).length;
+  const stamps = d.querySelectorAll("#printArea .ycgrid .ycd");
+  ok("every school day carries a rotation day", stamps.length === schoolDays,
+    stamps.length + " stamped of " + schoolDays);
+
+  /* Sep 14 2026 is a Day 5 — the same date the weekly pages open on. */
+  const sept = [...months].find(m => m.textContent.startsWith("September"));
+  const cell = [...sept.querySelectorAll("td")].find(td => {
+    const n = td.querySelector(".ycn"); return n && n.textContent === "14";
+  });
+  ok("Sep 14 2026 is stamped Day 5", cell && cell.querySelector(".ycd")
+    && cell.querySelector(".ycd").textContent === "5",
+    cell && cell.querySelector(".ycd") && cell.querySelector(".ycd").textContent);
+
+  /* Weekend closures have no cell to shade — the grid is Mon-Fri. */
+  const weekdayClosed = Object.keys(DD.closed)
+    .filter(ds => { const wd = new Date(ds + "T00:00:00Z").getUTCDay(); return wd >= 1 && wd <= 5; }).length;
+  ok("every weekday closure is shaded",
+    d.querySelectorAll("#printArea td.ycoff").length === weekdayClosed,
+    d.querySelectorAll("#printArea td.ycoff").length + " shaded of " + weekdayClosed +
+    " weekday closures (" + Object.keys(DD.closed).length + " total)");
+  /* The class being applied is not the same as it painting. A bare `.ycoff`
+     (0,1,0) loses to `.ycmonth td` (0,1,1), which silently blanked every shaded
+     day once. getComputedStyle cannot settle this — jsdom applies the last
+     matching rule rather than resolving specificity, and reports transparent
+     either way — so assert the selectors are written at cell specificity. */
+  const sheet = [...d.querySelectorAll("style")].map(x => x.textContent).join("\n");
+  const shades = ["ycoff", "ycearly", "ycexam", "ycmcas", "ycsnow", "yclast"];
+  const weak = shades.filter(c => !new RegExp("\\.ycmonth td\\." + c + "\\b").test(sheet));
+  ok("each shade outranks the cell's white default", weak.length === 0,
+    weak.length ? "too weak: ." + weak.join(", .") : shades.length + " checked");
+
+  ok("it says it is not an official publication",
+    /Not an official school publication/.test(d.querySelector("#printArea .ycfoot").textContent));
+
+  $("#yearcal").checked = false; $("#btnBuild").click(); await pause(400);
+  ok("unchecking the box removes it", !d.querySelector("#printArea .ycgrid"));
 }
 
 async function testRangesAfterYearEnd() {
@@ -263,7 +323,7 @@ async function testPrintColour() {
 (async () => {
   const all = [testLoads, testEscaping, testTermWarning, testNotesClear, testTimeParsing,
                testRecurringNoteDays, testGlance, testRanges, testRangesAfterYearEnd,
-               testDebounce, testPrintColour];
+               testDebounce, testYearCalendar, testPrintColour];
   for (const t of all) {
     try { await t(); }
     catch (e) { failures.push(t.name + " threw"); console.log("  FAIL  " + t.name + " threw — " + e.message); }

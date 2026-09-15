@@ -11,7 +11,7 @@ const ROWS=[["arr","ARRIVAL","1st period 8:20\n2nd period 9:37"],
             ["p4","4th Period","12:38 - 1:48"],["p5","5th Period","1:55 - 3:05"],
             ["dis","DISMISSAL","3:05 PM\n(2:15 PM on Day 6)"]];
 const HEX=c=>"FF"+String(c||"#ffffff").replace("#","").toUpperCase();
-const DARK="FF2F3E52", ACC="FF44607F", ACCBG="FFE8EDF2", GREY="FFF2F2F2", CLOSED="FFD9D9D9",
+const DARK="FF092142", ACC="FFCE222F", ACCBG="FFE7ECF3", GREY="FFF2F2F2", CLOSED="FFD9D9D9",
       EVENT="FFFFF2CC", LATE="FFFFE2E8", EARLY="FFFCE4D6", EXAM="FFF3E8EF", MCASF="FFE4EEF6";
 const thin={style:"thin",color:{argb:"FFB7B7B7"}};
 const BOX={top:thin,left:thin,bottom:thin,right:thin};

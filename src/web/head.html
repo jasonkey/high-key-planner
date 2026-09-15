@@ -1,8 +1,13 @@
 <title>High Key Planner</title>
 <style>
 :root{
-  --ink:#1c2430; --muted:#6b7785; --line:#d8dee6; --bg:#f6f7f9; --card:#fff;
-  --dark:#2f3e52; --accent:#44607f; --accentbg:#e8edf2;
+  --ink:#1c2430; --muted:#6b7785; --line:#d8dee6; --bg:#f6f7f9; --card:#fdfeff;
+  /* Brookline High navy and red. --accent is decoration only: day headers, the
+     after-school bar, buttons. --accentbg stays neutral on purpose — deriving it
+     from the red turns the arrival row pink and the LATE START cells stop
+     reading as a warning. Colours that mean something (--late, --early, --event,
+     --exam, --mcas and the course fills) are not brand colours. */
+  --dark:#092142; --accent:#ce222f; --accentbg:#e7ecf3;
   --late:#ffe2e8; --lateink:#9c1f3e; --early:#fce4d6; --earlyink:#7f2a2a;
   --event:#fff2cc; --closed:#d9d9d9; --exam:#f3e8ef; --examink:#7b4b6b; --mcas:#e4eef6;
 }
@@ -97,6 +102,36 @@ code.k{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px}
   .wk{page-break-after:always;break-after:page;page-break-inside:avoid}
   .wk:last-child{page-break-after:auto;break-after:auto}
 }
+/* ---- year at a glance: ten Mon-Fri month grids on one landscape page ---- */
+.yctitle{background:var(--dark);color:#fff;font-size:12.5px;font-weight:700;
+  padding:5px;letter-spacing:.02em;text-align:center}
+.ycgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-top:11px}
+.ycmonth{break-inside:avoid;page-break-inside:avoid}
+.ycname{font-size:12px;font-weight:700;color:var(--dark);text-align:center;padding:4px 0}
+.ycmonth table{width:100%;border-collapse:collapse;table-layout:fixed}
+.ycmonth th{background:var(--accent);color:#fff;font-size:9px;font-weight:700;
+  border:1px solid #b7b7b7;padding:2px}
+.ycmonth td{border:1px solid #c9c9c9;height:31px;vertical-align:top;
+  padding:2px 3px;position:relative;background:#fff}
+.ycn{font-size:10.5px;color:var(--ink)}
+.ycd{float:right;font-size:9.5px;font-weight:700;color:#fff;background:var(--dark);
+  border-radius:3px;padding:0 3px;line-height:1.4}
+.ycx{position:absolute;left:3px;bottom:1px;font-size:7px;font-weight:700;
+  letter-spacing:.02em;color:var(--earlyink)}
+.ycmonth td.ycblank,.yclegend .ycblank{background:#fafbfc}
+.ycmonth td.ycoff,.yclegend .ycoff{background:var(--closed)}
+.ycmonth td.ycearly,.yclegend .ycearly{background:var(--early)}
+.ycmonth td.ycexam,.yclegend .ycexam{background:var(--exam)}
+.ycmonth td.ycmcas,.yclegend .ycmcas{background:var(--mcas)}
+.ycmonth td.ycsnow,.yclegend .ycsnow{
+  background:repeating-linear-gradient(45deg,#fff,#fff 3px,#e4e4e4 3px,#e4e4e4 6px)}
+.ycmonth td.yclast,.yclegend .yclast{background:#fdecec}
+.ycmonth td.ycev,.yclegend .ycev{box-shadow:inset 0 -3px 0 var(--event)}
+.yclegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:10px;color:var(--muted)}
+.yclegend span{display:flex;align-items:center;gap:3px}
+.yclegend i{font-style:normal}
+.yclegend .sw{width:15px;height:12px;border:1px solid #c9c9c9;display:inline-block}
+.ycfoot{margin-top:7px;font-size:9px;color:var(--muted);font-style:italic}
 .wk{margin-bottom:26px}
 table.week{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
 table.week{page-break-inside:avoid;break-inside:avoid}

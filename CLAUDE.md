@@ -77,6 +77,14 @@ workbooks/planner.py   ← single source of truth for the school calendar
             └── src/assemble.py + src/web/* -> site/index.html
 ```
 
+Colours: `--dark` (#092142) and `--accent` (#ce222f) are Brookline High's navy and
+red, and they are **decoration only** — page header, title bar, day headers, the
+after-school bar. Everything that carries meaning keeps its own colour: `--late`,
+`--early`, `--event`, `--exam`, `--mcas` and the per-course fills. `--accentbg` is
+deliberately neutral rather than red-derived; a pink arrival row makes `LATE START`
+stop reading as a warning. The same three values live in `planner.py` (`DARK`,
+`ACCENT`, `ACCENTBG`) and `xlsx.js` (`DARK`, `ACC`, `ACCBG`) — change all three.
+
 `planner.py` holds the raw year: `DAYNUM` (date → rotation day 1–6), `CLOSED`,
 `SPECIAL`, `EXAM_DAYS`, `MCAS_DAYS`, `SNOW_DAYS`, `EVENTS`, `SEM2_START`,
 `BLOCKMAP` ((rotation day, period) → block session like `A1`), and `CLASS1_LUNCH2`

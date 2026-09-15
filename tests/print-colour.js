@@ -39,6 +39,10 @@ window.addEventListener("load",function(){
     document.querySelector("#btnDemo").click();
     setTimeout(function(){
       document.querySelector("#range").value="thisweek";
+      // measure a weekly page: the year calendar is mostly white by design and
+      // would drag the average down for reasons that have nothing to do with
+      // whether backgrounds print
+      document.querySelector("#yearcal").checked=false;
       document.querySelector("#btnBuild").click();
     },300);
   },200);

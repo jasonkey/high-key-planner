@@ -265,6 +265,72 @@ function cellHTML(c){
   const nh=notes.length?'<span class="cnotep">'+notes.map(esc).join(" · ")+"</span>":"";
   return '<td class="'+cls+'"'+bg+'><span class="cname">'+esc(c.name)+'</span><span class="cmeta">'+nl(c.meta)+"</span>"+nh+"</td>";
 }
+const MONTH_NAMES=["January","February","March","April","May","June","July",
+                   "August","September","October","November","December"];
+
+/* Mon-Fri only. School weeks have no weekend, and dropping the two columns is
+   what lets ten months fit legibly across one landscape page. */
+function monthWeeks(y, mo){
+  const last=new Date(Date.UTC(y, mo+1, 0)).getUTCDate();
+  const weeks=[]; let week=[null,null,null,null,null];
+  for(let dd=1; dd<=last; dd++){
+    const dt=new Date(Date.UTC(y, mo, dd)), wd=dt.getUTCDay();
+    if(wd<1 || wd>5) continue;
+    week[wd-1]=dt;
+    if(wd===5){ weeks.push(week); week=[null,null,null,null,null]; }
+  }
+  if(week.some(Boolean)) weeks.push(week);
+  return weeks;
+}
+
+/* One page answering the question the weekly pages cannot: what rotation day is
+   any given date? Reads the same district data as everything else. */
+function yearCalendarHtml(title){
+  const first=B.mkDate(D.firstMonday), last=B.mkDate(D.lastMonday);
+  let h='<div class="wk"><div class="yctitle">'+esc(title)+'   ·   The year at a glance</div>';
+  h+='<div class="ycgrid">';
+  let y=first.getUTCFullYear(), mo=first.getUTCMonth();
+  const endY=last.getUTCFullYear(), endMo=last.getUTCMonth();
+  while(y<endY || (y===endY && mo<=endMo)){
+    h+='<div class="ycmonth"><div class="ycname">'+MONTH_NAMES[mo]+" "+y+"</div>";
+    h+='<table><thead><tr><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th></tr></thead><tbody>';
+    monthWeeks(y,mo).forEach(week=>{
+      h+="<tr>";
+      week.forEach(dt=>{
+        if(!dt){ h+='<td class="ycblank"></td>'; return; }
+        const ds=B.iso(dt), i=B.dayInfo(ds);
+        let cls="", mark="";
+        if(i.type==="day")          { mark='<span class="ycd">'+i.dn+"</span>"; }
+        else if(i.type==="closed")  { cls="ycoff"; }
+        else if(i.type==="exam")    { cls="ycexam"; mark='<span class="ycx">EX</span>'; }
+        else if(i.type==="mcas")    { cls="ycmcas"; mark='<span class="ycx">MC</span>'; }
+        else if(i.type==="special") { cls="ycearly"; mark='<span class="ycx">ER</span>'; }
+        else if(i.type==="snow")    { cls="ycsnow"; }
+        else if(i.type==="last")    { cls="yclast"; mark='<span class="ycx">LAST</span>'; }
+        else                        { cls="ycblank"; }
+        const ev=D.events[ds] ? ' title="'+esc(D.events[ds])+'"' : "";
+        h+='<td class="'+cls+(D.events[ds]?" ycev":"")+'"'+ev+'><span class="ycn">'+
+           dt.getUTCDate()+"</span>"+mark+"</td>";
+      });
+      h+="</tr>";
+    });
+    h+="</tbody></table></div>";
+    mo++; if(mo>11){ mo=0; y++; }
+  }
+  h+="</div>";
+  h+='<div class="yclegend">'+
+     '<span><i class="ycd">4</i> rotation day</span>'+
+     '<span><i class="sw ycoff"></i> no school</span>'+
+     '<span><i class="sw ycearly"></i> early release</span>'+
+     '<span><i class="sw ycexam"></i> exams</span>'+
+     '<span><i class="sw ycmcas"></i> MCAS</span>'+
+     '<span><i class="sw ycsnow"></i> snow make-up (only if used)</span>'+
+     '<span><i class="sw ycev"></i> quarter end / event</span></div>';
+  h+='<div class="ycfoot">Not an official school publication \u2014 always confirm against the '+
+     "school's own calendar. Dismissal times for some early-release days are not published.</div>";
+  return h+"</div>";
+}
+
 function renderWeeks(){
   const who=($("#who").value||"").trim();
   const title=(who?who+"  ·  ":"")+"HIGH KEY  ·  BHS WEEKLY PLANNER";
@@ -356,8 +422,9 @@ function renderWeeks(){
     }
     out.push(h+"</table></div>");
   });
+  if($("#yearcal").checked) out.unshift(yearCalendarHtml(title));
   document.getElementById("printArea").innerHTML=out.join("");
-  return ms.length;
+  return out.length;
 }
 function mcasList(letters, ds){
   const names=[];
@@ -398,7 +465,7 @@ $("#btnClear").onclick=()=>{ $("#paste").value=""; $("#parseMsg").className="msg
 $("#btnBuild").onclick=build;
 $("#btnPrint").onclick=()=>{ renderWeeks(); window.print(); };
 $("#btnXlsx").onclick=()=>window.__XLSX__ && window.__XLSX__();
-["range","evening","who","bsTime","bsWhat","evTime","evWhat",
+["range","evening","who","yearcal","bsTime","bsWhat","evTime","evWhat",
  "bsd1","bsd2","bsd3","bsd4","bsd5","evd1","evd2","evd3","evd4","evd5"].forEach(id=>{
   const el=$("#"+id); if(!el) return;
   const go=()=>{ if($("#outCard").style.display==="block") build(); };

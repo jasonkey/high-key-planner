@@ -110,7 +110,9 @@ def F(sz=10,b=False,c="000000",i=False): return Font(name=FONT,size=sz,bold=b,co
 def fill(h): return PatternFill("solid",fgColor=h)
 CEN=Alignment(horizontal="center",vertical="center",wrap_text=True)
 LEFT=Alignment(horizontal="left",vertical="center",wrap_text=True)
-DARK="2F3E52"; ACCENT="44607F"; GREY="F2F2F2"; CLOSEDF="D9D9D9"; EVENTF="FFF2CC"
+# Brookline High navy and red — see the note in src/web/head.html on why the
+# arrival/dismissal tint (ACCENTBG) is deliberately not derived from the red.
+DARK="092142"; ACCENT="CE222F"; ACCENTBG="E7ECF3"; GREY="F2F2F2"; CLOSEDF="D9D9D9"; EVENTF="FFF2CC"
 LATEF="FFE2E8"; EARLYF="FCE4D6"; EXAMF="F3E8EF"; EXAMC="7B4B6B"; MCASF="E4EEF6"
 
 R_TITLE,R_DAY,R_NUM,R_EVT,R_ARR,R_Z,R_P1,R_P2,R_P3A,R_P3B,R_P4,R_P5,R_DIS,R_AFT = range(1,15)
@@ -272,7 +274,7 @@ def build_week(wb, monday, spec, subtitle):
     x=ws.cell(R_EVT,1,"SCHOOL NOTES"); x.font=F(9,True); x.fill=fill(GREY); x.alignment=CEN
     for r,t in LABELS.items():
         cc=ws.cell(r,1,t); cc.font=F(9,r in (R_ARR,R_DIS)); cc.alignment=CEN
-        cc.fill=fill("E8EDF2" if r in (R_ARR,R_DIS) else "FFFFFF")
+        cc.fill=fill(ACCENTBG if r in (R_ARR,R_DIS) else "FFFFFF")
     ws.merge_cells(start_row=R_AFT,start_column=1,end_row=R_AFT,end_column=7)
     a=ws.cell(R_AFT,1,"AFTER SCHOOL  →  10:00 PM          (write in activities, appointments, plans, cooking duty, homework)")
     a.font=F(9,True,"FFFFFF"); a.fill=fill(ACCENT); a.alignment=LEFT
@@ -282,10 +284,10 @@ def build_week(wb, monday, spec, subtitle):
 
     t=ws.cell(R_DAY,7,"TIMES"); t.font=F(9,True,"FFFFFF"); t.fill=fill(ACCENT); t.alignment=CEN
     ws.cell(R_NUM,7,"").fill=fill(ACCENT); ws.cell(R_EVT,7,"").fill=fill(GREY)
-    ar=ws.cell(R_ARR,7,"1st period 8:20\n2nd period 9:37"); ar.font=F(8,True,"1F3864"); ar.alignment=CEN; ar.fill=fill("E8EDF2")
+    ar=ws.cell(R_ARR,7,"1st period 8:20\n2nd period 9:37"); ar.font=F(8,True,"1F3864"); ar.alignment=CEN; ar.fill=fill(ACCENTBG)
     for r,txt in TIMES.items():
         cc=ws.cell(r,7,txt); cc.font=F(8,r==R_DIS,"1F3864"); cc.alignment=CEN
-        cc.fill=fill("E8EDF2" if r==R_DIS else "FFFFFF")
+        cc.fill=fill(ACCENTBG if r==R_DIS else "FFFFFF")
     for t_,r,flag,_w,_dd in EVE:
         cc=ws.cell(r,7,t_); cc.font=F(8,flag,"1F3864"); cc.alignment=CEN
         cc.fill=fill(EVENTF if flag else "FFFFFF")
@@ -345,7 +347,7 @@ def build_week(wb, monday, spec, subtitle):
             ban,dis,note=SPECIAL[day]
             n=ws.cell(R_NUM,col,ban); n.font=F(11,True,"7F4F00"); n.fill=fill(EARLYF); n.alignment=CEN
             e=ws.cell(R_EVT,col,note); e.font=F(8,True,"7F4F00"); e.fill=fill(EVENTF); e.alignment=CEN
-            aa=ws.cell(R_ARR,col,"8:20 AM"); aa.font=F(12,True); aa.fill=fill("E8EDF2"); aa.alignment=CEN
+            aa=ws.cell(R_ARR,col,"8:20 AM"); aa.font=F(12,True); aa.fill=fill(ACCENTBG); aa.alignment=CEN
             zz=ws.cell(R_Z,col,"free"); zz.font=F(8,False,"7F7F7F"); zz.alignment=CEN
             for r in (R_P1,R_P2,R_P3A,R_P3B,R_P4,R_P5):
                 cc=ws.cell(r,col,"Special schedule —\nclasses shortened" if r==R_P2 else "")
@@ -358,7 +360,7 @@ def build_week(wb, monday, spec, subtitle):
             e.fill=fill(EVENTF if ev else GREY)
             zz=ws.cell(R_Z,col,"free — no class"); zz.font=F(8,False,"7F7F7F"); zz.alignment=CEN
             if spec is None:
-                ws.cell(R_ARR,col,"").fill=fill("E8EDF2")
+                ws.cell(R_ARR,col,"").fill=fill(ACCENTBG)
                 for r,pn in ((R_P1,1),(R_P2,2),(R_P3A,3),(R_P4,4),(R_P5,5)):
                     bs=BLOCKMAP.get((dn,pn))
                     if not bs: continue
@@ -370,19 +372,19 @@ def build_week(wb, monday, spec, subtitle):
                 ws.cell(R_P3B,col,"").fill=fill("FFFFFF")
                 dv="2:15 PM  ** EARLY **" if dn==6 else "3:05 PM"
                 d=ws.cell(R_DIS,col,dv); d.font=F(11,True,"7F2A2A" if dn==6 else "1F3864")
-                d.fill=fill(EARLYF if dn==6 else "E8EDF2"); d.alignment=CEN
+                d.fill=fill(EARLYF if dn==6 else ACCENTBG); d.alignment=CEN
             else:
                 g=resolve_day(spec,dn,day)
                 aa=ws.cell(R_ARR,col,g["arrival"]+("\n** LATE START **" if g["late"] else ""))
                 aa.font=F(12,True,"9C1F3E" if g["late"] else "1F3864")
-                aa.fill=fill(LATEF if g["late"] else "E8EDF2"); aa.alignment=CEN
+                aa.fill=fill(LATEF if g["late"] else ACCENTBG); aa.alignment=CEN
                 for key,r in (("p1",R_P1),("p2",R_P2),("p3a",R_P3A),("p3b",R_P3B),("p4",R_P4),("p5",R_P5)):
                     title,body,ck=g[key]
                     cc=ws.cell(r,col,title+"\n"+body); isfree=ck=="free"
                     cc.font=F(10,not isfree,"8C8C8C" if isfree else "000000",isfree)
                     cc.fill=fill(PAL.get(ck,"FFFFFF")); cc.alignment=CEN
                 d=ws.cell(R_DIS,col,g["dismissal"]); d.font=F(12,True,"7F2A2A" if g["early"] else "1F3864")
-                d.fill=fill(EARLYF if g["early"] else "E8EDF2"); d.alignment=CEN
+                d.fill=fill(EARLYF if g["early"] else ACCENTBG); d.alignment=CEN
         else:
             flat(col,CLOSEDF,"—","")
 
@@ -473,7 +475,7 @@ def build_student_key(wb, spec, subtitle, extra_blocks):
     r=4
     for label,key in rows:
         ws.row_dimensions[r].height=26 if key in ("arrival","dismissal",None) else 54
-        lc=ws.cell(r,1,label); lc.font=F(9,True); lc.alignment=CEN; lc.fill=fill("E8EDF2"); lc.border=box
+        lc=ws.cell(r,1,label); lc.font=F(9,True); lc.alignment=CEN; lc.fill=fill(ACCENTBG); lc.border=box
         for dn in range(1,7):
             g=resolve_day(spec,dn,None)
             if key is None:
@@ -481,10 +483,10 @@ def build_student_key(wb, spec, subtitle, extra_blocks):
             elif key=="arrival":
                 v=g["arrival"]+("  ** LATE **" if g["late"] else "")
                 cc=ws.cell(r,1+dn,v); cc.font=F(10,True,"9C1F3E" if g["late"] else "1F3864")
-                cc.fill=fill(LATEF if g["late"] else "E8EDF2")
+                cc.fill=fill(LATEF if g["late"] else ACCENTBG)
             elif key=="dismissal":
                 cc=ws.cell(r,1+dn,g["dismissal"]); cc.font=F(10,True,"7F2A2A" if g["early"] else "1F3864")
-                cc.fill=fill(EARLYF if g["early"] else "E8EDF2")
+                cc.fill=fill(EARLYF if g["early"] else ACCENTBG)
             else:
                 title,body,ck=g[key]
                 cc=ws.cell(r,1+dn,title+"\n"+body)
@@ -511,12 +513,12 @@ def build_blank_key(wb, subtitle):
     r=4
     for label,pn in rows:
         ws.row_dimensions[r].height=26 if pn==99 else (42 if pn==3 else 34)
-        lc=ws.cell(r,1,label); lc.font=F(8 if pn==3 else 9,True); lc.alignment=CEN; lc.fill=fill("E8EDF2"); lc.border=box
+        lc=ws.cell(r,1,label); lc.font=F(8 if pn==3 else 9,True); lc.alignment=CEN; lc.fill=fill(ACCENTBG); lc.border=box
         for dn in range(1,7):
             if pn==99:
                 v="2:15 PM  ** EARLY **" if dn==6 else "3:05 PM"
                 cc=ws.cell(r,1+dn,v); cc.font=F(10,True,"7F2A2A" if dn==6 else "1F3864")
-                cc.fill=fill(EARLYF if dn==6 else "E8EDF2")
+                cc.fill=fill(EARLYF if dn==6 else ACCENTBG)
             elif pn==0:
                 cc=ws.cell(r,1+dn,"Z%d"%dn); cc.font=F(9,False,"7F7F7F"); cc.fill=fill("EFEFEF")
             else:

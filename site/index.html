@@ -6,8 +6,13 @@
 <title>High Key Planner</title>
 <style>
 :root{
-  --ink:#1c2430; --muted:#6b7785; --line:#d8dee6; --bg:#f6f7f9; --card:#fff;
-  --dark:#2f3e52; --accent:#44607f; --accentbg:#e8edf2;
+  --ink:#1c2430; --muted:#6b7785; --line:#d8dee6; --bg:#f6f7f9; --card:#fdfeff;
+  /* Brookline High navy and red. --accent is decoration only: day headers, the
+     after-school bar, buttons. --accentbg stays neutral on purpose — deriving it
+     from the red turns the arrival row pink and the LATE START cells stop
+     reading as a warning. Colours that mean something (--late, --early, --event,
+     --exam, --mcas and the course fills) are not brand colours. */
+  --dark:#092142; --accent:#ce222f; --accentbg:#e7ecf3;
   --late:#ffe2e8; --lateink:#9c1f3e; --early:#fce4d6; --earlyink:#7f2a2a;
   --event:#fff2cc; --closed:#d9d9d9; --exam:#f3e8ef; --examink:#7b4b6b; --mcas:#e4eef6;
 }
@@ -102,6 +107,36 @@ code.k{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px}
   .wk{page-break-after:always;break-after:page;page-break-inside:avoid}
   .wk:last-child{page-break-after:auto;break-after:auto}
 }
+/* ---- year at a glance: ten Mon-Fri month grids on one landscape page ---- */
+.yctitle{background:var(--dark);color:#fff;font-size:12.5px;font-weight:700;
+  padding:5px;letter-spacing:.02em;text-align:center}
+.ycgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-top:11px}
+.ycmonth{break-inside:avoid;page-break-inside:avoid}
+.ycname{font-size:12px;font-weight:700;color:var(--dark);text-align:center;padding:4px 0}
+.ycmonth table{width:100%;border-collapse:collapse;table-layout:fixed}
+.ycmonth th{background:var(--accent);color:#fff;font-size:9px;font-weight:700;
+  border:1px solid #b7b7b7;padding:2px}
+.ycmonth td{border:1px solid #c9c9c9;height:31px;vertical-align:top;
+  padding:2px 3px;position:relative;background:#fff}
+.ycn{font-size:10.5px;color:var(--ink)}
+.ycd{float:right;font-size:9.5px;font-weight:700;color:#fff;background:var(--dark);
+  border-radius:3px;padding:0 3px;line-height:1.4}
+.ycx{position:absolute;left:3px;bottom:1px;font-size:7px;font-weight:700;
+  letter-spacing:.02em;color:var(--earlyink)}
+.ycmonth td.ycblank,.yclegend .ycblank{background:#fafbfc}
+.ycmonth td.ycoff,.yclegend .ycoff{background:var(--closed)}
+.ycmonth td.ycearly,.yclegend .ycearly{background:var(--early)}
+.ycmonth td.ycexam,.yclegend .ycexam{background:var(--exam)}
+.ycmonth td.ycmcas,.yclegend .ycmcas{background:var(--mcas)}
+.ycmonth td.ycsnow,.yclegend .ycsnow{
+  background:repeating-linear-gradient(45deg,#fff,#fff 3px,#e4e4e4 3px,#e4e4e4 6px)}
+.ycmonth td.yclast,.yclegend .yclast{background:#fdecec}
+.ycmonth td.ycev,.yclegend .ycev{box-shadow:inset 0 -3px 0 var(--event)}
+.yclegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:10px;color:var(--muted)}
+.yclegend span{display:flex;align-items:center;gap:3px}
+.yclegend i{font-style:normal}
+.yclegend .sw{width:15px;height:12px;border:1px solid #c9c9c9;display:inline-block}
+.ycfoot{margin-top:7px;font-size:9px;color:var(--muted);font-style:italic}
 .wk{margin-bottom:26px}
 table.week{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
 table.week{page-break-inside:avoid;break-inside:avoid}
@@ -204,6 +239,8 @@ table.week .eve.dinner{background:var(--event);font-weight:700}
           <option value="18">Hourly lines to 6 PM</option>
           <option value="0">None</option>
         </select></label>
+      <label class="inline"><input type="checkbox" id="yearcal" checked>
+        One-page year calendar</label>
     </div>
     <details id="extras">
       <summary>Add a recurring note — before school or evening</summary>
@@ -752,6 +789,72 @@ function cellHTML(c){
   const nh=notes.length?'<span class="cnotep">'+notes.map(esc).join(" · ")+"</span>":"";
   return '<td class="'+cls+'"'+bg+'><span class="cname">'+esc(c.name)+'</span><span class="cmeta">'+nl(c.meta)+"</span>"+nh+"</td>";
 }
+const MONTH_NAMES=["January","February","March","April","May","June","July",
+                   "August","September","October","November","December"];
+
+/* Mon-Fri only. School weeks have no weekend, and dropping the two columns is
+   what lets ten months fit legibly across one landscape page. */
+function monthWeeks(y, mo){
+  const last=new Date(Date.UTC(y, mo+1, 0)).getUTCDate();
+  const weeks=[]; let week=[null,null,null,null,null];
+  for(let dd=1; dd<=last; dd++){
+    const dt=new Date(Date.UTC(y, mo, dd)), wd=dt.getUTCDay();
+    if(wd<1 || wd>5) continue;
+    week[wd-1]=dt;
+    if(wd===5){ weeks.push(week); week=[null,null,null,null,null]; }
+  }
+  if(week.some(Boolean)) weeks.push(week);
+  return weeks;
+}
+
+/* One page answering the question the weekly pages cannot: what rotation day is
+   any given date? Reads the same district data as everything else. */
+function yearCalendarHtml(title){
+  const first=B.mkDate(D.firstMonday), last=B.mkDate(D.lastMonday);
+  let h='<div class="wk"><div class="yctitle">'+esc(title)+'   ·   The year at a glance</div>';
+  h+='<div class="ycgrid">';
+  let y=first.getUTCFullYear(), mo=first.getUTCMonth();
+  const endY=last.getUTCFullYear(), endMo=last.getUTCMonth();
+  while(y<endY || (y===endY && mo<=endMo)){
+    h+='<div class="ycmonth"><div class="ycname">'+MONTH_NAMES[mo]+" "+y+"</div>";
+    h+='<table><thead><tr><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th></tr></thead><tbody>';
+    monthWeeks(y,mo).forEach(week=>{
+      h+="<tr>";
+      week.forEach(dt=>{
+        if(!dt){ h+='<td class="ycblank"></td>'; return; }
+        const ds=B.iso(dt), i=B.dayInfo(ds);
+        let cls="", mark="";
+        if(i.type==="day")          { mark='<span class="ycd">'+i.dn+"</span>"; }
+        else if(i.type==="closed")  { cls="ycoff"; }
+        else if(i.type==="exam")    { cls="ycexam"; mark='<span class="ycx">EX</span>'; }
+        else if(i.type==="mcas")    { cls="ycmcas"; mark='<span class="ycx">MC</span>'; }
+        else if(i.type==="special") { cls="ycearly"; mark='<span class="ycx">ER</span>'; }
+        else if(i.type==="snow")    { cls="ycsnow"; }
+        else if(i.type==="last")    { cls="yclast"; mark='<span class="ycx">LAST</span>'; }
+        else                        { cls="ycblank"; }
+        const ev=D.events[ds] ? ' title="'+esc(D.events[ds])+'"' : "";
+        h+='<td class="'+cls+(D.events[ds]?" ycev":"")+'"'+ev+'><span class="ycn">'+
+           dt.getUTCDate()+"</span>"+mark+"</td>";
+      });
+      h+="</tr>";
+    });
+    h+="</tbody></table></div>";
+    mo++; if(mo>11){ mo=0; y++; }
+  }
+  h+="</div>";
+  h+='<div class="yclegend">'+
+     '<span><i class="ycd">4</i> rotation day</span>'+
+     '<span><i class="sw ycoff"></i> no school</span>'+
+     '<span><i class="sw ycearly"></i> early release</span>'+
+     '<span><i class="sw ycexam"></i> exams</span>'+
+     '<span><i class="sw ycmcas"></i> MCAS</span>'+
+     '<span><i class="sw ycsnow"></i> snow make-up (only if used)</span>'+
+     '<span><i class="sw ycev"></i> quarter end / event</span></div>';
+  h+='<div class="ycfoot">Not an official school publication \u2014 always confirm against the '+
+     "school's own calendar. Dismissal times for some early-release days are not published.</div>";
+  return h+"</div>";
+}
+
 function renderWeeks(){
   const who=($("#who").value||"").trim();
   const title=(who?who+"  ·  ":"")+"HIGH KEY  ·  BHS WEEKLY PLANNER";
@@ -843,8 +946,9 @@ function renderWeeks(){
     }
     out.push(h+"</table></div>");
   });
+  if($("#yearcal").checked) out.unshift(yearCalendarHtml(title));
   document.getElementById("printArea").innerHTML=out.join("");
-  return ms.length;
+  return out.length;
 }
 function mcasList(letters, ds){
   const names=[];
@@ -885,7 +989,7 @@ $("#btnClear").onclick=()=>{ $("#paste").value=""; $("#parseMsg").className="msg
 $("#btnBuild").onclick=build;
 $("#btnPrint").onclick=()=>{ renderWeeks(); window.print(); };
 $("#btnXlsx").onclick=()=>window.__XLSX__ && window.__XLSX__();
-["range","evening","who","bsTime","bsWhat","evTime","evWhat",
+["range","evening","who","yearcal","bsTime","bsWhat","evTime","evWhat",
  "bsd1","bsd2","bsd3","bsd4","bsd5","evd1","evd2","evd3","evd4","evd5"].forEach(id=>{
   const el=$("#"+id); if(!el) return;
   const go=()=>{ if($("#outCard").style.display==="block") build(); };
@@ -908,7 +1012,7 @@ const ROWS=[["arr","ARRIVAL","1st period 8:20\n2nd period 9:37"],
             ["p4","4th Period","12:38 - 1:48"],["p5","5th Period","1:55 - 3:05"],
             ["dis","DISMISSAL","3:05 PM\n(2:15 PM on Day 6)"]];
 const HEX=c=>"FF"+String(c||"#ffffff").replace("#","").toUpperCase();
-const DARK="FF2F3E52", ACC="FF44607F", ACCBG="FFE8EDF2", GREY="FFF2F2F2", CLOSED="FFD9D9D9",
+const DARK="FF092142", ACC="FFCE222F", ACCBG="FFE7ECF3", GREY="FFF2F2F2", CLOSED="FFD9D9D9",
       EVENT="FFFFF2CC", LATE="FFFFE2E8", EARLY="FFFCE4D6", EXAM="FFF3E8EF", MCASF="FFE4EEF6";
 const thin={style:"thin",color:{argb:"FFB7B7B7"}};
 const BOX={top:thin,left:thin,bottom:thin,right:thin};
