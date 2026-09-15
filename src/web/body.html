@@ -1,0 +1,129 @@
+<header class="top"><div class="wrap">
+  <h1>High Key <span class="sub">· BHS Weekly Planner</span></h1>
+  <p>Turn your Aspen schedule into a printable week-by-week planner for the 2026/27 school year.
+     Every rotation day, bell time, closure, exam day and early dismissal is already built in —
+     you only supply your own courses. Nothing you type leaves this page.</p>
+</div></header>
+
+<div class="wrap">
+
+<div class="card noprint">
+  <div class="step"><span class="n">1</span> Paste your schedule from Aspen</div>
+  <div class="hint">In Aspen open <strong>My Info → Schedule</strong> and switch to the <strong>List</strong> view.
+    Select the whole table, copy it, and paste it below. You can also type the rows by hand in step 2.</div>
+  <textarea id="paste" spellcheck="false" placeholder="Paste the whole table here — course code, description, term, block and the Schedule column.&#10;&#10;Each row looks like:   AB1234-05    Course Name    FY    C Block    2(2,5) 3(3,6)    Teacher, Name"></textarea>
+  <div class="row">
+    <button id="btnParse">Read my schedule</button>
+    <button class="ghost" id="btnDemo">Try it with a made-up schedule</button>
+    <button class="ghost" id="btnClear">Clear</button>
+  </div>
+  <div class="msg" id="parseMsg"></div>
+
+  <details>
+    <summary>What the tool reads, and what it ignores</summary>
+    <p class="fine">It only needs the <code class="k">Schedule</code> column — text like
+      <code class="k">2(2,5) 3(3,6)</code> means <em>period 2 on rotation days 2 and 5, period 3 on days 3 and 6</em>.
+      That alone places every class. The <code class="k">Term</code> column (FY, S1, S2) decides whether a course runs
+      all year or swaps at the semester break. Course code, description and teacher are used for labels.
+      Room numbers are not in Aspen's list view, so add them yourself in step 2 if you want them printed.</p>
+  </details>
+</div>
+
+<div class="card noprint" id="editCard" style="display:none">
+  <div class="step"><span class="n">2</span> Check it, and add your rooms</div>
+  <div class="hint">Rooms are optional. Add a note to any class — a room, a supplies reminder, anything —
+    and choose whether it prints every time, on one rotation day, or on one weekday.</div>
+  <div class="scroller"><table class="edit"><thead><tr>
+    <th style="width:44px">Block</th><th>Course</th><th style="width:150px">Teacher</th>
+    <th style="width:110px">Room</th><th style="width:52px">Term</th><th style="width:160px">Meets</th>
+  </tr></thead><tbody id="editRows"></tbody></table></div>
+  <div id="conflictNote" class="msg err" style="display:none"></div>
+  <div id="deptNote" class="msg warn" style="display:none"></div>
+  <div id="pmNote" class="msg warn" style="display:none"></div>
+  <fieldset>
+    <legend>Planner options</legend>
+    <div class="opts">
+      <label class="inline">Name on each page
+        <input type="text" id="who" maxlength="28" placeholder="optional" style="width:150px"></label>
+      <label class="inline">Weeks to print
+        <select id="range">
+          <option value="all">Whole school year</option>
+          <option value="thisweek">This week only</option>
+          <option value="lastweek">Last week only</option>
+          <option value="thismonth">This calendar month</option>
+          <option value="next4">Next 4 weeks</option>
+          <option value="rest">Rest of the year from today</option>
+          <option value="sem1">Semester 1 — through Jan 28</option>
+          <option value="sem2">Semester 2 — Jan 29 onward</option>
+        </select></label>
+      <label class="inline">After-school block
+        <select id="evening">
+          <option value="22">Hourly lines to 10 PM</option>
+          <option value="20">Hourly lines to 8 PM</option>
+          <option value="18">Hourly lines to 6 PM</option>
+          <option value="0">None</option>
+        </select></label>
+    </div>
+    <details id="extras">
+      <summary>Add a recurring note — before school or evening</summary>
+      <div class="noteset">
+        <div class="noterow">
+          <span class="nlab">Before school</span>
+          <input type="text" id="bsTime" placeholder="7:00 AM" style="width:92px">
+          <input type="text" id="bsWhat" placeholder="what it is — e.g. Breakfast, Weight room, Tutoring" style="flex:1;min-width:180px">
+          <span class="days" id="bsDays"></span>
+        </div>
+        <div class="noterow">
+          <span class="nlab">Evening</span>
+          <input type="text" id="evTime" placeholder="6:15 PM" style="width:92px">
+          <input type="text" id="evWhat" placeholder="what it is — e.g. Dinner, Practice" style="flex:1;min-width:180px">
+          <span class="meets">every day</span>
+        </div>
+        <p class="fine">A before-school note prints on its own row <em>above</em> the arrival time, so a
+          late start is never hidden. Leave either row blank to skip it.</p>
+      </div>
+    </details>
+  </fieldset>
+  <div class="row">
+    <button id="btnBuild">Build my planner</button>
+  </div>
+</div>
+
+<div class="card noprint" id="outCard" style="display:none">
+  <div class="step"><span class="n">3</span> Your schedule at a glance</div>
+  <div class="hint">Check this against your Aspen page before you print. Arrival and dismissal are worked
+    out from the classes you actually have.</div>
+  <div class="scroller" id="atGlance"></div>
+  <div class="row">
+    <button id="btnPrint">Print / Save as PDF</button>
+    <button class="ghost" id="btnXlsx">Download spreadsheet (.xlsx)</button>
+    <span class="fine" id="outInfo"></span>
+  </div>
+  <div class="msg" id="outMsg"></div>
+</div>
+
+<div class="card noprint">
+  <div class="step"><span class="n">i</span> Good to know</div>
+  <ul class="fine" style="margin-left:20px;line-height:1.7">
+    <li><strong>Day 6 dismisses early, at 2:15 PM</strong> — T2 block runs 1:55–2:15, then teacher collaboration.</li>
+    <li><strong>Day 3 has no regular 5th period</strong> — T1 runs 1:55–2:25, then X Block until 3:05.</li>
+    <li><strong>3rd period is split.</strong> Courses coded CE, FP, TE, MA, PA, SC, VA or WE take Class 1 first
+      (10:54–12:04) then Lunch 2 (12:06–12:36). Courses coded EL, EN, ID, SO, SW, TU or WL take Lunch 1 first
+      (10:49–11:19) then Class 2 (11:21–12:31).</li>
+    <li><strong>If your first period is free</strong>, the planner gives you a later arrival time for that day.</li>
+    <li>Exam days, MCAS days and special-schedule days carry no rotation day, and no schedule for them is
+      published — those pages are left blank to write in.</li>
+    <li><strong>Check every row in step 2</strong> before you print — the tool reads what you pasted,
+      and a schedule that was copied short or stale will build a wrong year quietly.</li>
+    <li>Everything here runs on your own device. No account, no online service, nothing uploaded.</li>
+    <li><strong>Progress reports</strong> post in Aspen on Wed Oct 7, Tue Dec 15, Mon Mar 8 and Tue May 18.
+      <strong>Quarters end</strong> Nov 9, Jan 28, Apr 12 and Jun 21.</li>
+    <li>Dismissal times for the Nov 25 and Apr 8 early-release days are not published. Check with the school.</li>
+  </ul>
+  <p class="fine">Built from the BHS School Year Calendar 2026/27 and the district's per-block calendars.
+     Always confirm against the school's own calendar before relying on it.
+     This is a student-made convenience, not an official schedule.</p>
+</div>
+
+</div>
+<div id="printArea"></div>

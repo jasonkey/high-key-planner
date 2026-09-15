@@ -1,0 +1,13 @@
+# Real student schedules never belong in this repository.
+students/*
+!students/example.py
+!students/README.md
+
+# Generated output
+*.xlsx
+*.ics
+*.pdf
+workbooks/blocks.pkl
+__pycache__/
+*.pyc
+.DS_Store

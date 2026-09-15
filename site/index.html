@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>High Key Planner</title>
+<style>
+:root{
+  --ink:#1c2430; --muted:#6b7785; --line:#d8dee6; --bg:#f6f7f9; --card:#fff;
+  --dark:#2f3e52; --accent:#44607f; --accentbg:#e8edf2;
+  --late:#ffe2e8; --lateink:#9c1f3e; --early:#fce4d6; --earlyink:#7f2a2a;
+  --event:#fff2cc; --closed:#d9d9d9; --exam:#f3e8ef; --examink:#7b4b6b; --mcas:#e4eef6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
+header.top{background:var(--dark);color:#fff;padding:28px 0;margin-bottom:24px}
+header.top .wrap{padding-bottom:0}
+h1{margin:0 0 6px;font-size:24px;letter-spacing:.01em}
+h1 .sub{font-weight:400;font-size:17px;color:#b9c7d6;letter-spacing:0}
+header.top p{margin:0;color:#c6d2de;font-size:14px;max-width:70ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:18px}
+.step{display:flex;align-items:center;gap:10px;margin:0 0 4px;font-size:17px;font-weight:600}
+.step .n{flex:0 0 26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-size:13px;font-weight:700}
+.hint{color:var(--muted);font-size:13.5px;margin:2px 0 14px 36px}
+textarea{width:100%;min-height:150px;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  padding:12px;border:1px solid var(--line);border-radius:8px;background:#fcfcfd;resize:vertical;color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+button{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:#fff;
+  padding:9px 16px;border-radius:7px;cursor:pointer}
+button.ghost{background:#fff;color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+table.edit{width:100%;border-collapse:collapse;margin-top:12px;font-size:13.5px}
+@media (max-width:560px){table.edit{font-size:12.5px}table.edit th:nth-child(6),table.edit td:nth-child(6){display:none}}
+table.edit th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);font-weight:700}
+table.edit td{padding:5px 8px;border-bottom:1px solid #eef1f4;vertical-align:middle}
+table.edit input{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);
+  border-radius:6px;background:#fff;color:var(--ink)}
+.noterow-tr td{border-bottom:1px solid #eef1f4;padding-top:0}
+.cnotes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 0 6px}
+.cnote{display:inline-flex;gap:4px;align-items:center;background:#f4f7fa;border:1px solid var(--line);border-radius:7px;padding:3px 4px 3px 6px}
+.cnote input{width:240px;font-size:12.5px;padding:4px 6px}
+.cnote select{font-size:12px;padding:3px 4px}
+button.mini{font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px;background:#fff;color:var(--accent)}
+button.mini.add{border-style:dashed}
+table.week .cnotep{display:block;font-size:8.5px;color:#3d5166;font-style:italic;margin-top:1px}
+.grid .cnotep{display:block;font-size:10.5px;color:#3d5166;font-style:italic}
+.blk{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;
+  background:var(--accentbg);color:var(--accent);font-weight:700;font-size:13px}
+.meets{font-size:12px;color:var(--muted);white-space:nowrap}
+.msg{margin-top:12px;padding:10px 12px;border-radius:7px;font-size:13.5px;display:none}
+.msg.ok{background:#e8f3ec;color:#20613c;display:block}
+.msg.warn{background:#fdf1e3;color:#7f4f00;display:block}
+.msg.err{background:#fbe9e9;color:#8c2222;display:block}
+.warnchip{display:inline-block;font-size:11px;font-weight:700;color:#7f4f00;background:var(--event);border-radius:5px;padding:1px 6px;margin-left:6px}
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroller>table{min-width:760px}
+@media print{.scroller{overflow:visible}.scroller>table{min-width:0}}
+.grid{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px;table-layout:fixed}
+.grid th,.grid td{border:1px solid var(--line);padding:6px 5px;text-align:center;vertical-align:middle}
+.grid thead th{background:var(--accent);color:#fff;font-size:11.5px;letter-spacing:.04em}
+.grid th.rowlab{background:var(--accentbg);font-size:11px;color:var(--ink);width:96px}
+.grid .free{color:#9aa4af;font-style:italic}
+.grid .arr{font-weight:700;color:#1f3864;background:var(--accentbg)}
+.grid .arr.late{color:var(--lateink);background:var(--late)}
+.grid .dis{font-weight:700;color:#1f3864;background:var(--accentbg)}
+.grid .dis.early{color:var(--earlyink);background:var(--early)}
+.cname{font-weight:700;display:block}
+.cmeta{font-size:11px;color:#4a5563;display:block}
+.opts{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center}
+.noteset{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.noterow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.nlab{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;min-width:104px}
+.days{display:inline-flex;gap:4px}
+.days label{font-size:12px;display:inline-flex;align-items:center;gap:3px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
+.days input{margin:0}
+table.week .bs{background:#eef4ec;color:#2c5340;font-size:9px;font-weight:700;height:18px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:14px 0 0}
+legend{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:0 6px}
+label.inline{display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:13.5px}
+select,input[type=text]{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+details{margin-top:10px}
+summary{cursor:pointer;font-size:13.5px;color:var(--accent);font-weight:600}
+.fine{font-size:12.5px;color:var(--muted);margin-top:8px}
+code.k{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px}
+#printArea{display:none}
+@media print{
+  body{background:#fff}
+  header.top,.wrap>.card,.noprint{display:none!important}
+  .wrap{max-width:none;padding:0;margin:0}
+  #printArea{display:block}
+  @page{size:letter landscape;margin:8mm}
+  .wk{page-break-after:always;break-after:page;page-break-inside:avoid}
+  .wk:last-child{page-break-after:auto;break-after:auto}
+}
+.wk{margin-bottom:26px}
+table.week{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}
+table.week{page-break-inside:avoid;break-inside:avoid}
+table.week td,table.week th{border:1px solid #b7b7b7;padding:2px;text-align:center;vertical-align:middle;line-height:1.25}
+table.week .title{background:var(--dark);color:#fff;font-size:12.5px;font-weight:700;padding:5px;letter-spacing:.02em}
+table.week .dayhdr{background:var(--accent);color:#fff;font-size:11px;font-weight:700}
+table.week .rowlab{background:#fff;font-size:9px;width:12%}
+table.week .rowlab.k{background:var(--accentbg);font-weight:700}
+table.week .times{font-size:8px;color:#1f3864;width:14%}
+table.week .daynum{background:var(--dark);color:#fff;font-size:12px;font-weight:700}
+table.week .note{background:#f2f2f2;font-size:8.5px;font-weight:700;color:#7f4f00;height:17px}
+table.week .note.has{background:var(--event)}
+table.week .arr{background:var(--accentbg);font-weight:700;font-size:11.5px;color:#1f3864;height:24px}
+table.week .arr.late{background:var(--late);color:var(--lateink);font-size:10px}
+table.week .dis{background:var(--accentbg);font-weight:700;font-size:11.5px;color:#1f3864;height:22px}
+table.week .dis.early{background:var(--early);color:var(--earlyink)}
+table.week .z{font-size:8px;color:#7f7f7f;height:14px}
+table.week .cls{height:34px}
+table.week .cls .cname{font-size:10px;font-weight:700}
+table.week .cls .cmeta{font-size:9px;color:#333}
+table.week .free{background:#f7f7f7;color:#8c8c8c;font-style:italic;font-size:9px}
+table.week .closed{background:var(--closed);color:#7f7f7f;font-weight:700}
+table.week .exam{background:var(--exam);color:var(--examink)}
+table.week .examhdr{background:var(--examink);color:#fff;font-weight:700;font-size:11px}
+table.week .mcas{background:var(--mcas);color:#1f3864}
+table.week .mcashdr{background:#3f6e8c;color:#fff;font-weight:700;font-size:11px}
+table.week .spechdr{background:var(--early);color:var(--earlyink);font-weight:700;font-size:11px}
+table.week .afthdr{background:var(--accent);color:#fff;font-size:9px;font-weight:700;text-align:left;padding-left:6px}
+table.week .eve{height:18px}
+table.week .eve.lab{font-size:9px}
+table.week .eve.dinner{background:var(--event);font-weight:700}
+</style>
+</head>
+<body>
+
+
+<header class="top"><div class="wrap">
+  <h1>High Key <span class="sub">· BHS Weekly Planner</span></h1>
+  <p>Turn your Aspen schedule into a printable week-by-week planner for the 2026/27 school year.
+     Every rotation day, bell time, closure, exam day and early dismissal is already built in —
+     you only supply your own courses. Nothing you type leaves this page.</p>
+</div></header>
+
+<div class="wrap">
+
+<div class="card noprint">
+  <div class="step"><span class="n">1</span> Paste your schedule from Aspen</div>
+  <div class="hint">In Aspen open <strong>My Info → Schedule</strong> and switch to the <strong>List</strong> view.
+    Select the whole table, copy it, and paste it below. You can also type the rows by hand in step 2.</div>
+  <textarea id="paste" spellcheck="false" placeholder="Paste the whole table here — course code, description, term, block and the Schedule column.&#10;&#10;Each row looks like:   AB1234-05    Course Name    FY    C Block    2(2,5) 3(3,6)    Teacher, Name"></textarea>
+  <div class="row">
+    <button id="btnParse">Read my schedule</button>
+    <button class="ghost" id="btnDemo">Try it with a made-up schedule</button>
+    <button class="ghost" id="btnClear">Clear</button>
+  </div>
+  <div class="msg" id="parseMsg"></div>
+
+  <details>
+    <summary>What the tool reads, and what it ignores</summary>
+    <p class="fine">It only needs the <code class="k">Schedule</code> column — text like
+      <code class="k">2(2,5) 3(3,6)</code> means <em>period 2 on rotation days 2 and 5, period 3 on days 3 and 6</em>.
+      That alone places every class. The <code class="k">Term</code> column (FY, S1, S2) decides whether a course runs
+      all year or swaps at the semester break. Course code, description and teacher are used for labels.
+      Room numbers are not in Aspen's list view, so add them yourself in step 2 if you want them printed.</p>
+  </details>
+</div>
+
+<div class="card noprint" id="editCard" style="display:none">
+  <div class="step"><span class="n">2</span> Check it, and add your rooms</div>
+  <div class="hint">Rooms are optional. Add a note to any class — a room, a supplies reminder, anything —
+    and choose whether it prints every time, on one rotation day, or on one weekday.</div>
+  <div class="scroller"><table class="edit"><thead><tr>
+    <th style="width:44px">Block</th><th>Course</th><th style="width:150px">Teacher</th>
+    <th style="width:110px">Room</th><th style="width:52px">Term</th><th style="width:160px">Meets</th>
+  </tr></thead><tbody id="editRows"></tbody></table></div>
+  <div id="conflictNote" class="msg err" style="display:none"></div>
+  <div id="deptNote" class="msg warn" style="display:none"></div>
+  <div id="pmNote" class="msg warn" style="display:none"></div>
+  <fieldset>
+    <legend>Planner options</legend>
+    <div class="opts">
+      <label class="inline">Name on each page
+        <input type="text" id="who" maxlength="28" placeholder="optional" style="width:150px"></label>
+      <label class="inline">Weeks to print
+        <select id="range">
+          <option value="all">Whole school year</option>
+          <option value="thisweek">This week only</option>
+          <option value="lastweek">Last week only</option>
+          <option value="thismonth">This calendar month</option>
+          <option value="next4">Next 4 weeks</option>
+          <option value="rest">Rest of the year from today</option>
+          <option value="sem1">Semester 1 — through Jan 28</option>
+          <option value="sem2">Semester 2 — Jan 29 onward</option>
+        </select></label>
+      <label class="inline">After-school block
+        <select id="evening">
+          <option value="22">Hourly lines to 10 PM</option>
+          <option value="20">Hourly lines to 8 PM</option>
+          <option value="18">Hourly lines to 6 PM</option>
+          <option value="0">None</option>
+        </select></label>
+    </div>
+    <details id="extras">
+      <summary>Add a recurring note — before school or evening</summary>
+      <div class="noteset">
+        <div class="noterow">
+          <span class="nlab">Before school</span>
+          <input type="text" id="bsTime" placeholder="7:00 AM" style="width:92px">
+          <input type="text" id="bsWhat" placeholder="what it is — e.g. Breakfast, Weight room, Tutoring" style="flex:1;min-width:180px">
+          <span class="days" id="bsDays"></span>
+        </div>
+        <div class="noterow">
+          <span class="nlab">Evening</span>
+          <input type="text" id="evTime" placeholder="6:15 PM" style="width:92px">
+          <input type="text" id="evWhat" placeholder="what it is — e.g. Dinner, Practice" style="flex:1;min-width:180px">
+          <span class="meets">every day</span>
+        </div>
+        <p class="fine">A before-school note prints on its own row <em>above</em> the arrival time, so a
+          late start is never hidden. Leave either row blank to skip it.</p>
+      </div>
+    </details>
+  </fieldset>
+  <div class="row">
+    <button id="btnBuild">Build my planner</button>
+  </div>
+</div>
+
+<div class="card noprint" id="outCard" style="display:none">
+  <div class="step"><span class="n">3</span> Your schedule at a glance</div>
+  <div class="hint">Check this against your Aspen page before you print. Arrival and dismissal are worked
+    out from the classes you actually have.</div>
+  <div class="scroller" id="atGlance"></div>
+  <div class="row">
+    <button id="btnPrint">Print / Save as PDF</button>
+    <button class="ghost" id="btnXlsx">Download spreadsheet (.xlsx)</button>
+    <span class="fine" id="outInfo"></span>
+  </div>
+  <div class="msg" id="outMsg"></div>
+</div>
+
+<div class="card noprint">
+  <div class="step"><span class="n">i</span> Good to know</div>
+  <ul class="fine" style="margin-left:20px;line-height:1.7">
+    <li><strong>Day 6 dismisses early, at 2:15 PM</strong> — T2 block runs 1:55–2:15, then teacher collaboration.</li>
+    <li><strong>Day 3 has no regular 5th period</strong> — T1 runs 1:55–2:25, then X Block until 3:05.</li>
+    <li><strong>3rd period is split.</strong> Courses coded CE, FP, TE, MA, PA, SC, VA or WE take Class 1 first
+      (10:54–12:04) then Lunch 2 (12:06–12:36). Courses coded EL, EN, ID, SO, SW, TU or WL take Lunch 1 first
+      (10:49–11:19) then Class 2 (11:21–12:31).</li>
+    <li><strong>If your first period is free</strong>, the planner gives you a later arrival time for that day.</li>
+    <li>Exam days, MCAS days and special-schedule days carry no rotation day, and no schedule for them is
+      published — those pages are left blank to write in.</li>
+    <li><strong>Check every row in step 2</strong> before you print — the tool reads what you pasted,
+      and a schedule that was copied short or stale will build a wrong year quietly.</li>
+    <li>Everything here runs on your own device. No account, no online service, nothing uploaded.</li>
+    <li><strong>Progress reports</strong> post in Aspen on Wed Oct 7, Tue Dec 15, Mon Mar 8 and Tue May 18.
+      <strong>Quarters end</strong> Nov 9, Jan 28, Apr 12 and Jun 21.</li>
+    <li>Dismissal times for the Nov 25 and Apr 8 early-release days are not published. Check with the school.</li>
+  </ul>
+  <p class="fine">Built from the BHS School Year Calendar 2026/27 and the district's per-block calendars.
+     Always confirm against the school's own calendar before relying on it.
+     This is a student-made convenience, not an official schedule.</p>
+</div>
+
+</div>
+<div id="printArea"></div>
+
+<script>window.__DISTRICT__={"year":"2026/27","dayNum":{"2026-09-08":1,"2026-09-09":2,"2026-09-10":3,"2026-09-11":4,"2026-09-14":5,"2026-09-15":6,"2026-09-16":1,"2026-09-17":2,"2026-09-18":3,"2026-09-22":4,"2026-09-23":5,"2026-09-24":6,"2026-09-25":1,"2026-09-28":2,"2026-09-29":3,"2026-09-30":4,"2026-10-01":5,"2026-10-02":6,"2026-10-05":1,"2026-10-06":2,"2026-10-07":3,"2026-10-08":4,"2026-10-09":5,"2026-10-13":6,"2026-10-14":1,"2026-10-15":2,"2026-10-16":3,"2026-10-19":4,"2026-10-20":5,"2026-10-21":6,"2026-10-22":1,"2026-10-23":2,"2026-10-26":3,"2026-10-27":4,"2026-10-28":5,"2026-10-29":6,"2026-10-30":1,"2026-11-02":2,"2026-11-04":3,"2026-11-05":4,"2026-11-06":5,"2026-11-09":6,"2026-11-10":1,"2026-11-12":2,"2026-11-13":3,"2026-11-16":4,"2026-11-17":5,"2026-11-18":6,"2026-11-19":1,"2026-11-20":2,"2026-11-23":3,"2026-11-24":4,"2026-11-30":5,"2026-12-01":6,"2026-12-02":1,"2026-12-04":2,"2026-12-07":3,"2026-12-08":4,"2026-12-09":5,"2026-12-10":6,"2026-12-11":1,"2026-12-14":2,"2026-12-15":3,"2026-12-16":4,"2026-12-17":5,"2026-12-18":6,"2026-12-21":1,"2026-12-22":2,"2026-12-23":3,"2027-01-04":4,"2027-01-05":5,"2027-01-06":6,"2027-01-07":1,"2027-01-08":2,"2027-01-11":3,"2027-01-12":4,"2027-01-13":5,"2027-01-14":6,"2027-01-15":1,"2027-01-19":2,"2027-01-20":3,"2027-01-21":4,"2027-01-22":5,"2027-01-25":6,"2027-01-29":1,"2027-02-01":2,"2027-02-02":3,"2027-02-03":4,"2027-02-04":5,"2027-02-05":6,"2027-02-08":1,"2027-02-09":2,"2027-02-10":3,"2027-02-11":4,"2027-02-12":5,"2027-02-22":6,"2027-02-23":1,"2027-02-24":2,"2027-02-25":3,"2027-02-26":4,"2027-03-01":5,"2027-03-02":6,"2027-03-03":1,"2027-03-04":2,"2027-03-05":3,"2027-03-08":4,"2027-03-10":5,"2027-03-11":6,"2027-03-12":1,"2027-03-15":2,"2027-03-16":3,"2027-03-17":4,"2027-03-18":5,"2027-03-19":6,"2027-03-22":1,"2027-03-25":2,"2027-03-29":3,"2027-03-30":4,"2027-03-31":5,"2027-04-01":6,"2027-04-02":1,"2027-04-05":2,"2027-04-06":3,"2027-04-07":4,"2027-04-09":5,"2027-04-12":6,"2027-04-13":1,"2027-04-14":2,"2027-04-15":3,"2027-04-16":4,"2027-04-26":5,"2027-04-27":6,"2027-04-28":1,"2027-04-29":2,"2027-04-30":3,"2027-05-03":4,"2027-05-04":5,"2027-05-05":6,"2027-05-06":1,"2027-05-07":2,"2027-05-10":3,"2027-05-11":4,"2027-05-12":5,"2027-05-13":6,"2027-05-14":1,"2027-05-17":2,"2027-05-20":3,"2027-05-21":4,"2027-05-24":5,"2027-05-25":6,"2027-05-26":1,"2027-05-27":2,"2027-05-28":3,"2027-06-03":4,"2027-06-04":5,"2027-06-07":6,"2027-06-08":1,"2027-06-09":2,"2027-06-10":3,"2027-06-11":4,"2027-06-14":5,"2027-06-15":6},"closed":{"2026-09-21":{"banner":"SCHOOL CLOSED","why":"Yom Kippur"},"2026-10-12":{"banner":"SCHOOL CLOSED","why":"Indigenous Peoples' Day"},"2026-11-03":{"banner":"SCHOOL CLOSED","why":"Professional Dev. Day"},"2026-11-11":{"banner":"SCHOOL CLOSED","why":"Veterans Day"},"2026-11-26":{"banner":"NO SCHOOL","why":"Thanksgiving Break"},"2026-11-27":{"banner":"NO SCHOOL","why":"Thanksgiving Break"},"2026-12-24":{"banner":"NO SCHOOL","why":"Winter Break"},"2026-12-25":{"banner":"NO SCHOOL","why":"Winter Break"},"2026-12-26":{"banner":"NO SCHOOL","why":"Winter Break"},"2026-12-27":{"banner":"NO SCHOOL","why":"Winter Break"},"2026-12-28":{"banner":"NO SCHOOL","why":"Winter Break"},"2026-12-29":{"banner":"NO SCHOOL","why":"Winter Break"},"2026-12-30":{"banner":"NO SCHOOL","why":"Winter Break"},"2026-12-31":{"banner":"NO SCHOOL","why":"Winter Break"},"2027-01-01":{"banner":"NO SCHOOL","why":"Winter Break"},"2027-01-18":{"banner":"NO SCHOOL","why":"Martin Luther King Jr. Day"},"2027-02-15":{"banner":"NO SCHOOL","why":"February Break"},"2027-02-16":{"banner":"NO SCHOOL","why":"February Break"},"2027-02-17":{"banner":"NO SCHOOL","why":"February Break"},"2027-02-18":{"banner":"NO SCHOOL","why":"February Break"},"2027-02-19":{"banner":"NO SCHOOL","why":"February Break"},"2027-03-09":{"banner":"NO SCHOOL","why":"No school"},"2027-03-26":{"banner":"NO SCHOOL","why":"No school"},"2027-04-19":{"banner":"NO SCHOOL","why":"April Break"},"2027-04-20":{"banner":"NO SCHOOL","why":"April Break"},"2027-04-21":{"banner":"NO SCHOOL","why":"April Break"},"2027-04-22":{"banner":"NO SCHOOL","why":"April Break"},"2027-04-23":{"banner":"NO SCHOOL","why":"April Break"},"2027-05-31":{"banner":"NO SCHOOL","why":"Memorial Day"}},"special":{"2026-11-25":{"banner":"SPECIAL SCHEDULE","dismissal":"Early (time not published)","note":"Special Schedule / Early Release"},"2026-12-03":{"banner":"SPECIAL SCHEDULE","dismissal":"12:40 PM","note":"Early Release \u2014 PK-12 dismissed 12:40 PM"},"2027-04-08":{"banner":"SPECIAL SCHEDULE","dismissal":"Early (time not published)","note":"Special Schedule / Early Release"}},"exams":{"2027-01-26":"MIDTERM EXAMS","2027-01-27":"MIDTERM EXAMS","2027-01-28":"MIDTERM EXAMS","2027-06-16":"FINAL EXAMS","2027-06-17":"FINAL EXAMS","2027-06-18":"FINAL EXAMS"},"mcas":["2027-03-23","2027-03-24","2027-05-18","2027-05-19","2027-06-01","2027-06-02"],"snow":["2027-06-22","2027-06-23","2027-06-24","2027-06-25","2027-06-28"],"lastDay":"2027-06-21","events":{"2026-10-01":"Back to School Night 6:00-9:00 PM (parents)","2026-10-07":"Progress reports posted in Aspen","2026-12-15":"Progress reports posted in Aspen","2027-03-08":"Progress reports posted in Aspen","2027-05-18":"Progress reports posted in Aspen","2026-10-09":"PICTURE DAY","2026-11-09":"** QUARTER 1 ENDS **","2027-01-28":"** QUARTER 2 + SEMESTER 1 END **","2027-01-29":"Semester 2 begins","2027-04-12":"** QUARTER 3 ENDS **","2027-06-21":"** LAST DAY OF SCHOOL \u2014 QUARTER 4 ENDS **"},"sem2Start":"2027-01-29","blockMap":{"1-1":"A1","3-1":"A2","5-1":"A3","6-2":"A4","2-1":"B1","3-2":"B2","4-1":"B3","6-1":"B4","2-2":"C1","3-3":"C2","5-2":"C3","6-3":"C4","1-2":"D1","2-3":"D2","4-2":"D3","5-3":"D4","1-3":"E1","2-4":"E2","4-4":"E3","6-4":"E4","1-4":"F1","2-5":"F2","4-3":"F3","5-5":"F4","1-5":"G1","3-4":"G2","4-5":"G3","5-4":"G4","3-5":"T1","6-5":"T2"},"mcasS1":["A","C","E","T"],"mcasS2":["B","D","F","G"],"class1Lunch2":["CE","FP","MA","PA","SC","TE","VA","WE"],"firstMonday":"2026-09-14","lastMonday":"2027-06-21","periodTimes":{"1":"8:20 - 9:30","2":"9:37 - 10:47","4":"12:38 - 1:48","5":"1:55 - 3:05"}};</script>
+<script>
+/* High Key · BHS Weekly Planner — everything runs in this page. Nothing is uploaded. */
+(function(){
+"use strict";
+const D = window.__DISTRICT__;
+const $ = s => document.querySelector(s);
+const iso = d => d.toISOString().slice(0,10);
+const mkDate = s => { const [y,m,dd]=s.split("-").map(Number); return new Date(Date.UTC(y,m-1,dd)); };
+const addDays = (d,n) => new Date(d.getTime()+n*86400000);
+const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const fmtLong = d => MON[d.getUTCMonth()]+" "+d.getUTCDate()+", "+d.getUTCFullYear();
+const fmtShort = d => (d.getUTCMonth()+1)+"/"+d.getUTCDate();
+const PALETTE = ["dcEaf7","fbe0ce","ddeedc","e6deef","faf0cc","d5edea","f7dfe4","e8e2b4","cfe3e8","e4e7ec"]
+                .map(h=>"#"+h.toLowerCase());
+const C1L2 = new Set(D.class1Lunch2);
+
+let COURSES = [];      // parsed rows
+let SLOTS   = {};      // "day-period" -> [course,...]
+let PMROWS  = [];
+
+/* ---------------- department codes ----------------
+   The two-letter prefix of a course code decides which half of the split
+   3rd period the course sits in. */
+const DEPTS=["CE","EL","EN","FP","HR","ID","MA","PA","SC","SO","SW","TE","TU","VA","WE","WL"];
+function deptOK(code){ return DEPTS.indexOf(String(code).slice(0,2).toUpperCase())>=0; }
+
+/* ---------------- parsing ---------------- */
+function parseAspen(text){
+  const codeRe = /(?:^|[^A-Z0-9])([A-Z]{2}[A-Z0-9]{2,8}-\d{2})(?![A-Z0-9])/g;
+  const hits=[]; let m;
+  while((m=codeRe.exec(text))!==null){ const at=m.index+m[0].length-m[1].length;
+    hits.push({code:m[1], at:at, end:at+m[1].length}); }
+  if(!hits.length) return {rows:[], err:"Couldn't find any course codes (like AB1234-05) in what you pasted."};
+  const rows=[];
+  hits.forEach((h,i)=>{
+    const chunk = text.slice(h.end, i+1<hits.length ? hits[i+1].at : text.length)
+                      .replace(/[\r\n\t]+/g," ").replace(/\s{2,}/g," ").trim();
+    const termM  = chunk.match(/\b(FY|S1|S2|S3|Q[1-4])\b/);
+    const trackM = chunk.match(/\b([A-Z])\s*Block\b/) || chunk.match(/\b([A-G])\(([\d,]+)\)/);
+    const NAME=/([A-Z][A-Za-z'’\-]+,\s*[A-Z](?:[A-Za-z'’\-]*\.?|\.))/;
+    const teachM = chunk.match(new RegExp(NAME.source+"\\s*$")) || chunk.match(NAME);
+    const meets=[]; let pm=null;
+    let re=/\b(\d)\(([\d,]+)\)/g, g;
+    while((g=re.exec(chunk))!==null){
+      const per=+g[1];
+      g[2].split(",").forEach(d=>{ const dn=+d; if(dn>=1&&dn<=6&&per>=1&&per<=5) meets.push({day:dn,per}); });
+    }
+    const pmM = chunk.match(/\bPM\(([\d,]+)\)/);
+    if(pmM) pm = pmM[1].split(",").map(Number);
+    let desc = chunk.slice(0, termM ? termM.index : chunk.length).trim();
+    desc = desc.replace(/\s*[-–]\s*$/,"").trim();
+    if(!desc && teachM) desc = h.code;
+    rows.push({code:h.code, desc:desc||h.code, term:(termM?termM[1]:"FY"),
+               track:(trackM?trackM[1]:""), teacher:(teachM?teachM[1]:""), room:"",
+               meets, pm});
+  });
+  return {rows};
+}
+
+function blockLetterFor(r){
+  if(r.track) return r.track;
+  for(const s of r.meets){ const b=D.blockMap[s.day+"-"+s.per]; if(b) return b[0]; }
+  return "";
+}
+function sessionsFor(r){
+  const out=[];
+  r.meets.forEach(s=>{ const b=D.blockMap[s.day+"-"+s.per]; if(b&&!out.includes(b)) out.push(b); });
+  return out.sort();
+}
+
+function splitRows(){
+  return COURSES.filter(r=>{
+    const letters={};
+    (r.sessions||[]).forEach(s=>letters[s[0]]=1);
+    return Object.keys(letters).length>1;
+  });
+}
+function slotConflicts(){
+  const seen={}, bad=[];
+  COURSES.forEach(r=>{
+    (r.meets||[]).forEach(s=>{
+      const k=s.day+"-"+s.per;
+      (seen[k]=seen[k]||[]).push(r);
+    });
+  });
+  Object.keys(seen).forEach(k=>{
+    const list=seen[k];
+    ["S1","S2"].forEach(sem=>{
+      const live=list.filter(c=>c.term==="FY"||c.term===sem);
+      if(live.length>1){
+        const names=live.map(c=>c.desc).join(" and ");
+        const msg=names+" both land in period "+k.split("-")[1]+" on Day "+k.split("-")[0]+
+                  " ("+(sem==="S1"?"semester 1":"semester 2")+")";
+        if(bad.indexOf(msg)<0) bad.push(msg);
+      }
+    });
+  });
+  return bad;
+}
+function indexCourses(){
+  SLOTS={}; PMROWS=[];
+  let ci=0;
+  COURSES.forEach(r=>{
+    r.block = blockLetterFor(r);
+    r.sessions = sessionsFor(r);
+    if(r.color===undefined) r.color = PALETTE[ci++ % PALETTE.length];
+    if(r.pm){ PMROWS.push(r); }
+    r.meets.forEach(s=>{ const k=s.day+"-"+s.per; (SLOTS[k]=SLOTS[k]||[]).push(r); });
+  });
+}
+function pick(key, dateStr){
+  const list=SLOTS[key]; if(!list||!list.length) return null;
+  const sem = (dateStr && dateStr >= D.sem2Start) ? "S2" : "S1";
+  return list.find(c=>c.term==="FY"||c.term===sem) || null;
+}
+
+/* ---------------- day resolution ---------------- */
+function resolveDay(dn, dateStr){
+  const out={cells:{}};
+  const at = p => ({block:D.blockMap[dn+"-"+p], course:pick(dn+"-"+p, dateStr)});
+  [1,2,4].forEach(p=>{
+    const {block,course}=at(p);
+    out.cells["p"+p] = course
+      ? {kind:"class", name:course.desc, meta:metaLine(course,block), color:course.color,
+         notes:notesFor(course,dn,dateStr)}
+      : {kind:"free", name:"FREE — no class", meta:(block?block[0]+" block does not meet":"")};
+  });
+  const t3=at(3);
+  if(!t3.course){
+    out.cells.p3a={kind:"lunch",name:"LUNCH 1",meta:"10:49 - 11:19"};
+    out.cells.p3b={kind:"free",name:"FREE — no class",meta:"11:21 - 12:31"};
+  } else {
+    const c=t3.course, first = C1L2.has(c.code.slice(0,2).toUpperCase());
+    const cell={kind:"class",name:c.desc,meta:metaLine(c,t3.block)+"\n"+(first?"Class 1 · 10:54-12:04":"Class 2 · 11:21-12:31"),
+                color:c.color, notes:notesFor(c,dn,dateStr)};
+    if(first){ out.cells.p3a=cell; out.cells.p3b={kind:"lunch",name:"LUNCH 2",meta:"12:06 - 12:36"}; }
+    else     { out.cells.p3a={kind:"lunch",name:"LUNCH 1",meta:"10:49 - 11:19"}; out.cells.p3b=cell; }
+  }
+  const t5=at(5);
+  if(t5.block==="T1"||t5.block==="T2"){
+    const c=t5.course;
+    const body=(c?[lastName(c.teacher),c.room?"Rm "+c.room:""].filter(Boolean).join("  ·  ")+"\n":"")+
+      (t5.block==="T1" ? "T1 · 1:55 - 2:25\nthen X Block to 3:05" : "T2 · 1:55 - 2:15\nEARLY DISMISSAL");
+    out.cells.p5={kind:"t", name:(c?c.desc:"T BLOCK"), meta:body.trim(), notes:notesFor(c,dn,dateStr)};
+    out.dismissal = t5.block==="T1" ? ["3:05 PM",false] : ["2:15 PM  ** EARLY **",true];
+  } else if(!t5.course){
+    out.cells.p5={kind:"free",name:"FREE — no class",meta:"1:55 - 3:05"};
+  } else {
+    out.cells.p5={kind:"class",name:t5.course.desc,meta:metaLine(t5.course,t5.block),color:t5.course.color,
+                  notes:notesFor(t5.course,dn,dateStr)};
+  }
+  const has = p => !!pick(dn+"-"+p, dateStr);
+  out.arrival = has(1) ? ["8:20 AM",false] : has(2) ? ["9:37 AM",true]
+              : has(3) ? ["10:49 AM",true] : ["12:38 PM",true];
+  if(!out.dismissal) out.dismissal = has(5) ? ["3:05 PM",false] : ["1:48 PM  ** EARLY **",true];
+  return out;
+}
+const lastName = t => String(t||"").split(",")[0].trim();
+/* scope: "all" | "d1".."d6" (rotation day) | "w1".."w5" (Mon..Fri) */
+function notesFor(c, dn, dateStr){
+  if(!c || !c.notes || !c.notes.length) return [];
+  let wd=0;
+  if(dateStr){ const d=mkDateLocal(dateStr); wd=d.getUTCDay(); }
+  return c.notes.filter(n=>{
+    if(!n.text) return false;
+    if(n.scope==="all") return true;
+    if(n.scope[0]==="d") return +n.scope.slice(1)===dn;
+    if(n.scope[0]==="w") return +n.scope.slice(1)===wd;
+    return false;
+  }).map(n=>n.text);
+}
+function mkDateLocal(s){ const [y,m,d]=s.split("-").map(Number); return new Date(Date.UTC(y,m-1,d)); }
+function metaLine(c, block){
+  const bits=[]; if(c.teacher) bits.push(lastName(c.teacher));
+  bits.push(c.room?("Rm "+c.room):"");
+  const l1=bits.filter(Boolean).join("  ·  ");
+  const l2=block?(block[0]+" Block  ·  "+block):"";
+  return [l1,l2].filter(Boolean).join("\n");
+}
+function pmFor(dn){ return PMROWS.filter(r=>r.pm && r.pm.includes(dn)); }
+
+/* ---------------- day classification ---------------- */
+function dayInfo(ds){
+  if(D.closed[ds])  return {type:"closed", banner:D.closed[ds].banner, why:D.closed[ds].why};
+  if(D.snow.includes(ds)) return {type:"snow"};
+  if(ds===D.lastDay) return {type:"last"};
+  if(D.exams[ds])   return {type:"exam", banner:D.exams[ds]};
+  if(D.mcas.includes(ds)) return {type:"mcas"};
+  if(D.special[ds]) return {type:"special", ...D.special[ds]};
+  if(D.dayNum[ds]!==undefined) return {type:"day", dn:D.dayNum[ds]};
+  return {type:"none"};
+}
+window.__BHS__ = {parseAspen, resolveDay, dayInfo, indexCourses, deptOK, DEPTS, slotConflicts, splitRows,
+  get COURSES(){return COURSES;}, set COURSES(v){COURSES=v;},
+  get SLOTS(){return SLOTS;}, pick, pmFor, PALETTE,
+  iso, mkDate, addDays, fmtLong, fmtShort, DOW, D};
+})();
+
+</script>
+<script>
+(function(){
+"use strict";
+const B=window.__BHS__, D=B.D, $=s=>document.querySelector(s);
+function hourLabel(h){ const ap=h<12?"AM":"PM", hh=((h+11)%12)+1; return hh+":00 "+ap; }
+function eveningRows(){
+  const end=+($("#evening").value||0); if(!end) return [];
+  const note=noteOf("ev"), rows=[];
+  for(let h=15;h<=end;h++){
+    rows.push({label:hourLabel(h), flag:false});
+    if(note && note.hour===h) rows.push({label:note.what+"  "+note.time, flag:true});
+  }
+  return rows;
+}
+function parseTime(s){
+  const m=String(s||"").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?$/i);
+  if(!m) return null;
+  let h=+m[1]%12; if(m[3].toLowerCase()==="p") h+=12;
+  return {hour:h, minute:m[2]?+m[2]:0, time:((h%12)||12)+":"+(m[2]||"00")+" "+(m[3].toUpperCase()+"M")};
+}
+function noteOf(pfx){
+  const t=parseTime($("#"+pfx+"Time").value), w=($("#"+pfx+"What").value||"").trim();
+  if(!t||!w) return null;
+  const days = pfx==="bs" ? [...document.querySelectorAll("#bsDays input:checked")].map(i=>+i.value) : [1,2,3,4,5];
+  if(!days.length) return null;
+  return {hour:t.hour, time:t.time, what:w, days};
+}
+const ROWS=[["arr","ARRIVAL","1st period 8:20\n2nd period 9:37"],
+            ["z","Z Block  (free)","7:30 - 8:15\n(no class)"],
+            ["p1","1st Period","8:20 - 9:30"],["p2","2nd Period","9:37 - 10:47"],
+            ["p3a","3rd Period\n1st half","Lunch 1: 10:49-11:19\nClass 1: 10:54-12:04"],
+            ["p3b","3rd Period\n2nd half","Class 2: 11:21-12:31\nLunch 2: 12:06-12:36"],
+            ["p4","4th Period","12:38 - 1:48"],["p5","5th Period","1:55 - 3:05"],
+            ["dis","DISMISSAL","3:05 PM\n(2:15 PM on Day 6)"]];
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const nl=s=>esc(s).replace(/\n/g,"<br>");
+
+/* A made-up schedule, used only for the "try it" button. No real student or teacher. */
+const DEMO=[
+ ["WL1000-01","Spanish 2","FY","A(2,4)","1(3) 2(6)","Adams, R."],
+ ["EN1000-01","English 9","FY","B Block","1(2,4,6) 2(3)","Brooks, T."],
+ ["VA1000-01","Studio Art","FY","C Block","2(2,5) 3(3,6)","Chen, L."],
+ ["SC1000-01","Biology","FY","D Block","2(1,4) 3(2,5)","Diaz, M."],
+ ["WE1000-01","Health & Wellness","S1","E Block","3(1) 4(2,4,6)","Ellis, J."],
+ ["MA1000-01","Algebra 1","FY","F Block","3(4) 4(1) 5(2,5)","Ford, K."],
+ ["SO1000-01","US History","FY","G Block","4(3,5) 5(1,4)","Gray, S."],
+ ["HR1000-01","Advisory","FY","T Block","5(3,6)","Hall, P."],
+].map(r=>r.join("\t")).join("\n");
+
+function msg(el,kind,text){ el.className="msg "+kind; el.textContent=text; }
+
+/* ---------- step 1 ---------- */
+function doParse(){
+  const out=B.parseAspen($("#paste").value||"");
+  if(out.err){ msg($("#parseMsg"),"err",out.err+" Paste the List view of your Aspen schedule, or use the example to see the format."); return; }
+  const withMeets=out.rows.filter(r=>r.meets.length||r.pm);
+  if(!withMeets.length){ msg($("#parseMsg"),"err","Found course codes but no schedule text like 2(2,5). Make sure the Schedule column is included."); return; }
+  B.COURSES=out.rows; B.indexCourses();
+  const named=out.rows.filter(r=>r.meets.length).length;
+  msg($("#parseMsg"),"ok","Read "+named+" scheduled course"+(named===1?"":"s")+
+      (out.rows.length>named?(" plus "+(out.rows.length-named)+" with no class period"):"")+". Check them below.");
+  renderEdit(); $("#editCard").style.display="block";
+  $("#editCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function scopeOptions(sel){
+  const o=[["all","Every time it meets"]];
+  for(let d=1;d<=6;d++) o.push(["d"+d,"Only on Day "+d]);
+  ["Mondays","Tuesdays","Wednesdays","Thursdays","Fridays"].forEach((n,i)=>o.push(["w"+(i+1),"Only on "+n]));
+  return o.map(([v,t])=>'<option value="'+v+'"'+(v===sel?" selected":"")+">"+t+"</option>").join("");
+}
+function renderEdit(){
+  const tb=$("#editRows"); tb.innerHTML="";
+  B.COURSES.forEach((r,i)=>{
+    if(!r.notes) r.notes=[];
+    const tr=document.createElement("tr");
+    tr.innerHTML='<td>'+(r.block?'<span class="blk">'+esc(r.block)+'</span>':'<span class="meets">—</span>')+'</td>'+
+      '<td><input data-i="'+i+'" data-f="desc" value="'+esc(r.desc)+'"><div class="meets">'+esc(r.code)+'</div></td>'+
+      '<td><input data-i="'+i+'" data-f="teacher" value="'+esc(r.teacher)+'"></td>'+
+      '<td><input data-i="'+i+'" data-f="room" value="'+esc(r.room)+'" placeholder="optional"></td>'+
+      '<td><span class="meets">'+esc(r.term)+'</span></td>'+
+      '<td><span class="meets">'+(r.sessions.length?esc(r.sessions.join(", ")):(r.pm?"PM block, day "+r.pm.join(", "):"not scheduled"))+'</span></td>';
+    tb.appendChild(tr);
+    const nr=document.createElement("tr"); nr.className="noterow-tr";
+    nr.innerHTML='<td></td><td colspan="5"><div class="cnotes" data-i="'+i+'"></div></td>';
+    tb.appendChild(nr);
+    drawNotes(i);
+  });
+  tb.oninput=e=>{ const t=e.target; if(t.dataset.f!==undefined && t.dataset.i!==undefined && !t.dataset.n)
+    B.COURSES[+t.dataset.i][t.dataset.f]=t.value; };
+  const split=B.splitRows();
+  const conf=B.slotConflicts().concat(split.map(r=>
+    '"'+r.desc+'" is listed in more than one block ('+r.sessions.join(", ")+'), which is not possible'));
+  const cel=$("#conflictNote");
+  if(conf.length){ cel.style.display="block"; cel.className="msg err";
+    cel.textContent="Two classes claim the same period: "+conf.join("; ")+
+      ". One of the rows was probably misread — fix it before printing."; }
+  else cel.style.display="none";
+  const badDept=B.COURSES.filter(r=>r.meets.length && !B.deptOK(r.code));
+  const del=$("#deptNote");
+  if(badDept.length){ del.style.display="block"; del.className="msg warn";
+    del.textContent="Course code not recognised for "+badDept.map(r=>r.code).join(", ")+
+      ". The first two letters decide which lunch the student gets, so check those against Aspen."; }
+  else del.style.display="none";
+  const pm=B.COURSES.filter(r=>r.pm);
+  if(pm.length){ const el=$("#pmNote"); el.style.display="block"; el.className="msg warn";
+    el.textContent="PM block: "+pm.map(r=>r.desc+" ("+r.term+", day "+r.pm.join(" & ")+")").join("; ")+
+      ". PM block times are not published, so this is listed here but not placed on the weekly pages."; }
+}
+function drawNotes(i){
+  const box=document.querySelector('.cnotes[data-i="'+i+'"]'); if(!box) return;
+  const r=B.COURSES[i];
+  box.innerHTML = r.notes.map((n,j)=>
+      '<div class="cnote"><input maxlength="64" data-i="'+i+'" data-n="'+j+'" data-k="text" value="'+esc(n.text)+
+      '" placeholder="e.g. Rm 212 · bring lab coat">'+
+      '<select data-i="'+i+'" data-n="'+j+'" data-k="scope">'+scopeOptions(n.scope)+'</select>'+
+      '<button class="mini" data-del="'+i+':'+j+'" title="Remove">&times;</button></div>').join("")
+    + '<button class="mini add" data-add="'+i+'">+ note on this class</button>';
+  box.oninput=e=>{ const t=e.target; if(!t.dataset.k) return;
+    B.COURSES[+t.dataset.i].notes[+t.dataset.n][t.dataset.k]=t.value; live(); };
+  box.onchange=box.oninput;
+  box.onclick=e=>{
+    const add=e.target.dataset.add, del=e.target.dataset.del;
+    if(add!==undefined){ B.COURSES[+add].notes.push({text:"",scope:"all"}); drawNotes(+add); }
+    else if(del){ const [ci,ni]=del.split(":").map(Number);
+      B.COURSES[ci].notes.splice(ni,1); drawNotes(ci); live(); }
+  };
+}
+function live(){ if($("#outCard").style.display==="block") build(); }
+
+/* ---------- at a glance ---------- */
+function renderGlance(){
+  let h='<table class="grid"><thead><tr><th class="rowlab"></th>';
+  for(let d=1;d<=6;d++) h+="<th>DAY "+d+"</th>";
+  h+="</tr></thead><tbody>";
+  const R=[]; for(let d=1;d<=6;d++) R.push(B.resolveDay(d,null));
+  ROWS.forEach(([k,label])=>{
+    h+='<tr><th class="rowlab">'+nl(label)+"</th>";
+    for(let d=0;d<6;d++){
+      const g=R[d];
+      if(k==="arr")      h+='<td class="arr'+(g.arrival[1]?" late":"")+'">'+esc(g.arrival[0])+(g.arrival[1]?"<br>LATE START":"")+"</td>";
+      else if(k==="dis") h+='<td class="dis'+(g.dismissal[1]?" early":"")+'">'+esc(g.dismissal[0])+"</td>";
+      else if(k==="z")   h+='<td class="free">free</td>';
+      else { const c=g.cells[k];
+        const nn=(c.notes||[]).filter(Boolean);
+        h+='<td'+(c.color?' style="background:'+c.color+'"':(c.kind==="free"?' class="free"':""))+'>'+
+           '<span class="cname">'+esc(c.name)+'</span><span class="cmeta">'+nl(c.meta)+'</span>'+
+           (nn.length?'<span class="cnotep">'+nn.map(esc).join(" · ")+"</span>":"")+'</td>'; }
+    }
+    h+="</tr>";
+  });
+  $("#atGlance").innerHTML=h+"</tbody></table>";
+}
+
+/* ---------- weekly pages ---------- */
+function weekMondays(mode){
+  const first=B.mkDate(D.firstMonday), last=B.mkDate(D.lastMonday), out=[];
+  for(let m=first;m<=last;m=B.addDays(m,7)) out.push(m);
+  const now=new Date(), today=B.iso(new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())));
+  const onOrAfter = out.filter(m=>B.iso(B.addDays(m,6))>=today);
+  const current   = out.filter(m=>B.iso(m)<=today && today<=B.iso(B.addDays(m,6)));
+  if(mode==="sem1")      return out.filter(m=>B.iso(m)<D.sem2Start);
+  if(mode==="sem2")      return out.filter(m=>B.iso(B.addDays(m,4))>=D.sem2Start);
+  if(mode==="next4")     return (onOrAfter.length?onOrAfter:out).slice(0,4);
+  if(mode==="rest")      return onOrAfter.length?onOrAfter:out;
+  if(mode==="thisweek")  return current.length?current:(onOrAfter.length?[onOrAfter[0]]:[out[0]]);
+  if(mode==="lastweek"){
+    const i=out.findIndex(m=>B.iso(m)===B.iso(current[0]||onOrAfter[0]||out[0]));
+    return [out[Math.max(0,i-1)]];
+  }
+  if(mode==="thismonth"){
+    const y=now.getFullYear(), mo=now.getMonth();
+    const inMonth=out.filter(m=>[0,1,2,3,4].some(i=>{const d=B.addDays(m,i);
+      return d.getUTCFullYear()===y && d.getUTCMonth()===mo;}));
+    return inMonth.length?inMonth:(onOrAfter.length?onOrAfter.slice(0,4):out.slice(0,4));
+  }
+  return out;
+}
+function cellHTML(c){
+  if(!c) return "<td></td>";
+  const st=c.color?' style="background:'+c.color+'"':"";
+  const cls=c.kind==="free"?"cls free":(c.kind==="lunch"?"cls":(c.kind==="t"?"cls":"cls"));
+  const bg=c.kind==="lunch"?' style="background:#efefef"':(c.kind==="t"?' style="background:#e2e2f0"':st);
+  const notes=(c.notes||[]).filter(Boolean);
+  const nh=notes.length?'<span class="cnotep">'+notes.map(esc).join(" · ")+"</span>":"";
+  return '<td class="'+cls+'"'+bg+'><span class="cname">'+esc(c.name)+'</span><span class="cmeta">'+nl(c.meta)+"</span>"+nh+"</td>";
+}
+function renderWeeks(){
+  const who=($("#who").value||"").trim();
+  const title=(who?who+"  ·  ":"")+"HIGH KEY  ·  BHS WEEKLY PLANNER";
+  const ms=weekMondays($("#range").value);
+  const out=[];
+  ms.forEach(mon=>{
+    const days=[0,1,2,3,4].map(i=>B.addDays(mon,i));
+    let h='<div class="wk"><table class="week">';
+    h+='<tr><td class="title" colspan="7">'+esc(title)+"   ·   Week of "+esc(B.fmtLong(mon))+"</td></tr>";
+    h+='<tr><td class="rowlab"></td>';
+    days.forEach(d=>h+='<td class="dayhdr">'+B.DOW[d.getUTCDay()].toUpperCase()+"   "+B.fmtShort(d)+"</td>");
+    h+='<td class="dayhdr">TIMES</td></tr>';
+    const info=days.map(d=>({d, ds:B.iso(d), i:B.dayInfo(B.iso(d))}));
+    const res=info.map(x=>x.i.type==="day"?B.resolveDay(x.i.dn,x.ds):null);
+    h+='<tr><td class="rowlab k">ROTATION DAY</td>';
+    info.forEach((x,i)=>{
+      const t=x.i.type;
+      if(t==="day")           h+='<td class="daynum">DAY '+x.i.dn+"</td>";
+      else if(t==="closed")   h+='<td class="closed">'+esc(x.i.banner)+"</td>";
+      else if(t==="snow")     h+='<td class="closed">SNOW MAKE-UP</td>';
+      else if(t==="last")     h+='<td class="examhdr" style="background:#7f2a2a">LAST DAY</td>';
+      else if(t==="exam")     h+='<td class="examhdr">'+esc(x.i.banner)+"</td>";
+      else if(t==="mcas")     h+='<td class="mcashdr">MCAS TESTING</td>';
+      else if(t==="special")  h+='<td class="spechdr">'+esc(x.i.banner)+"</td>";
+      else                    h+='<td class="closed">—</td>';
+    });
+    h+="<td></td></tr>";
+    h+='<tr><td class="rowlab">SCHOOL NOTES</td>';
+    info.forEach(x=>{ const ev=D.events[x.ds]||(x.i.type==="closed"?x.i.why:"")||(x.i.type==="special"?x.i.note:"")||
+                              (x.i.type==="mcas"?"Grade 10 MCAS":"")||(x.i.type==="snow"?"only if snow days were used":"");
+      h+='<td class="note'+(ev?" has":"")+'">'+esc(ev)+"</td>"; });
+    h+="<td></td></tr>";
+    const bs=noteOf("bs");
+    if(bs){
+      h+='<tr><td class="rowlab">BEFORE SCHOOL</td>';
+      info.forEach((x,i)=>{
+        const wd=x.d.getUTCDay(), on = bs.days.includes(wd) && (x.i.type!=="closed" && x.i.type!=="snow" && x.i.type!=="none");
+        h+='<td class="bs">'+(on?esc(bs.time+"  ·  "+bs.what):"")+"</td>";
+      });
+      h+='<td class="times">before<br>Z Block</td></tr>';
+    }
+    ROWS.forEach(([k,label,times])=>{
+      h+='<tr><td class="rowlab'+(k==="arr"||k==="dis"?" k":"")+'">'+nl(label)+"</td>";
+      info.forEach((x,i)=>{
+        const t=x.i.type, g=res[i];
+        if(t==="day"){
+          if(k==="arr")      h+='<td class="arr'+(g.arrival[1]?" late":"")+'">'+esc(g.arrival[0])+(g.arrival[1]?"<br>** LATE START **":"")+"</td>";
+          else if(k==="dis") h+='<td class="dis'+(g.dismissal[1]?" early":"")+'">'+esc(g.dismissal[0])+"</td>";
+          else if(k==="z")   h+='<td class="z">free — no class</td>';
+          else               h+=cellHTML(g.cells[k]);
+        } else if(t==="closed"||t==="snow"||t==="none"){
+          h+='<td class="closed">'+(k==="p2"?(t==="snow"?"reserved make-up day":"— no school —"):"")+"</td>";
+        } else if(t==="exam"){
+          h+='<td class="exam">'+(k==="arr"||k==="dis"?"see exam<br>schedule":(k==="p2"?"Exam schedule not published —<br>write in each exam and its time":""))+"</td>";
+        } else if(t==="mcas"){
+          let v="";
+          if(k==="arr"||k==="dis") v="see MCAS<br>schedule";
+          else if(k==="p2") v="SESSION 1<br>"+esc(mcasList(D.mcasS1,x.ds));
+          else if(k==="p4") v="SESSION 2<br>"+esc(mcasList(D.mcasS2,x.ds));
+          else if(k==="p3a") v="times not published";
+          h+='<td class="mcas">'+v+"</td>";
+        } else if(t==="last"){
+          h+='<td class="exam">'+(k==="p2"?"Last day of school<br>Schedule not published":"")+"</td>";
+        } else { /* special */
+          let v="";
+          if(k==="arr") v="8:20 AM"; else if(k==="dis") v=esc(x.i.dismissal);
+          else if(k==="p2") v="Special schedule —<br>classes shortened"; else if(k==="z") v="free";
+          h+='<td style="background:#fce4d6;color:#7f4f00;font-weight:600">'+v+"</td>";
+        }
+      });
+      h+='<td class="times">'+nl(times)+"</td></tr>";
+    });
+    const eve=eveningRows();
+    if(eve.length){
+      h+='<tr><td class="afthdr" colspan="7">AFTER SCHOOL  →  '+esc(eve[eve.length-1].label)+
+         '      (write in activities, appointments, plans, homework)</td></tr>';
+      eve.forEach(r=>{
+        h+='<tr><td class="eve lab'+(r.flag?" dinner":"")+'">'+esc(r.label)+"</td>";
+        for(let i=0;i<5;i++) h+='<td class="eve'+(r.flag?" dinner":"")+'"></td>';
+        h+='<td class="eve lab'+(r.flag?" dinner":"")+'">'+esc(r.label)+"</td></tr>";
+      });
+    }
+    out.push(h+"</table></div>");
+  });
+  document.getElementById("printArea").innerHTML=out.join("");
+  return ms.length;
+}
+function mcasList(letters, ds){
+  const names=[];
+  for(let d=1;d<=6;d++) for(let p=1;p<=5;p++){
+    const b=D.blockMap[d+"-"+p]; if(!b) continue;
+    if(letters.indexOf(b[0])<0) continue;
+    const c=B.pick(d+"-"+p, ds);
+    if(c && names.indexOf(c.desc)<0) names.push(c.desc);
+  }
+  return names.length?names.join(", "):"—";
+}
+
+window.__WEEKS__=weekMondays; window.__EVEROWS__=eveningRows; window.__BSNOTE__=()=>noteOf("bs");
+
+/* ---------- wiring ---------- */
+function build(){
+  B.indexCourses(); renderGlance();
+  const n=renderWeeks();
+  $("#outCard").style.display="block";
+  const label=$("#range").selectedOptions[0].textContent;
+  $("#outInfo").textContent=n+" page"+(n===1?"":"s")+" — "+label.toLowerCase()+".";
+  msg($("#outMsg"),"ok","Printing gives you one landscape page per week. Set your browser to print backgrounds so the colours come through.");
+  $("#outCard").scrollIntoView({behavior:"smooth",block:"start"});
+}
+(function(){
+  const names=["Mon","Tue","Wed","Thu","Fri"];
+  $("#bsDays").innerHTML=names.map((n,i)=>
+    '<label><input type="checkbox" value="'+(i+1)+'" checked id="bsd'+(i+1)+'">'+n+"</label>").join("");
+})();
+$("#btnParse").onclick=doParse;
+$("#btnDemo").onclick=()=>{ $("#paste").value=DEMO; doParse();
+  msg($("#parseMsg"),"warn","Loaded a made-up schedule so you can see how it works. Clear it before building a real one."); };
+$("#btnClear").onclick=()=>{ $("#paste").value=""; $("#parseMsg").className="msg";
+  $("#editCard").style.display="none"; $("#outCard").style.display="none"; };
+$("#btnBuild").onclick=build;
+$("#btnPrint").onclick=()=>{ renderWeeks(); window.print(); };
+$("#btnXlsx").onclick=()=>window.__XLSX__ && window.__XLSX__();
+["range","evening","who","bsTime","bsWhat","evTime","evWhat","bsd1","bsd2","bsd3","bsd4","bsd5"].forEach(id=>{
+  const el=$("#"+id); if(!el) return;
+  const go=()=>{ if($("#outCard").style.display==="block") build(); };
+  el.onchange=go; if(el.tagName==="INPUT"&&el.type==="text") el.onblur=go;
+});
+})();
+
+</script>
+<script>
+/* Styled .xlsx export via ExcelJS (loaded from cdnjs). Mirrors the printed layout. */
+(function(){
+"use strict";
+const B=window.__BHS__, D=B.D, $=s=>document.querySelector(s);
+
+const ROWS=[["arr","ARRIVAL","1st period 8:20\n2nd period 9:37"],
+            ["z","Z Block  (free)","7:30 - 8:15\n(no class)"],
+            ["p1","1st Period","8:20 - 9:30"],["p2","2nd Period","9:37 - 10:47"],
+            ["p3a","3rd Period\n1st half","Lunch 1: 10:49-11:19\nClass 1: 10:54-12:04"],
+            ["p3b","3rd Period\n2nd half","Class 2: 11:21-12:31\nLunch 2: 12:06-12:36"],
+            ["p4","4th Period","12:38 - 1:48"],["p5","5th Period","1:55 - 3:05"],
+            ["dis","DISMISSAL","3:05 PM\n(2:15 PM on Day 6)"]];
+const HEX=c=>"FF"+String(c||"#ffffff").replace("#","").toUpperCase();
+const DARK="FF2F3E52", ACC="FF44607F", ACCBG="FFE8EDF2", GREY="FFF2F2F2", CLOSED="FFD9D9D9",
+      EVENT="FFFFF2CC", LATE="FFFFE2E8", EARLY="FFFCE4D6", EXAM="FFF3E8EF", MCASF="FFE4EEF6";
+const thin={style:"thin",color:{argb:"FFB7B7B7"}};
+const BOX={top:thin,left:thin,bottom:thin,right:thin};
+const CEN={vertical:"middle",horizontal:"center",wrapText:true};
+const font=(sz,b,c)=>({name:"Arial",size:sz,bold:!!b,color:{argb:c||"FF000000"}});
+const fillOf=argb=>({type:"pattern",pattern:"solid",fgColor:{argb}});
+
+function set(ws,r,c,v,o){ const cell=ws.getCell(r,c); cell.value=v==null?"":v;
+  cell.alignment=o&&o.align||CEN; cell.border=BOX;
+  if(o&&o.font) cell.font=o.font; if(o&&o.fill) cell.fill=fillOf(o.fill); return cell; }
+
+const weekMondays = m => window.__WEEKS__(m);       // one implementation, shared with the printed pages
+function load(){
+  return new Promise((res,rej)=>{
+    if(window.ExcelJS) return res();
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js";
+    s.onload=()=>res(); s.onerror=()=>rej(new Error("could not load the spreadsheet library"));
+    document.head.appendChild(s);
+  });
+}
+
+window.__XLSX__=async function(){
+  const out=$("#outMsg");
+  out.className="msg"; out.textContent="";
+  try{
+    out.className="msg warn"; out.textContent="Building the spreadsheet…";
+    await load();
+    const who=($("#who").value||"").trim();
+    const title=(who?who+"  ·  ":"")+"HIGH KEY  ·  BHS WEEKLY PLANNER";
+    const eve=window.__EVEROWS__();
+    const bs=window.__BSNOTE__();
+    const wb=new ExcelJS.Workbook();
+    weekMondays($("#range").value).forEach(mon=>{
+      const days=[0,1,2,3,4].map(i=>B.addDays(mon,i));
+      const ws=wb.addWorksheet(B.fmtShort(mon).replace("/","-"),{
+        pageSetup:{orientation:"landscape",paperSize:1,fitToPage:true,fitToWidth:1,fitToHeight:1,
+                   margins:{left:.3,right:.3,top:.35,bottom:.35,header:.2,footer:.2}},
+        views:[{showGridLines:false}]});
+      ws.getColumn(1).width=15; for(let i=2;i<=6;i++) ws.getColumn(i).width=25; ws.getColumn(7).width=19;
+      ws.mergeCells(1,1,1,7);
+      set(ws,1,1,title+"   ·   Week of "+B.fmtLong(mon),{font:font(14,true,"FFFFFFFF"),fill:DARK});
+      ws.getRow(1).height=26;
+      set(ws,2,1,"",{fill:ACC});
+      days.forEach((d,i)=>set(ws,2,2+i,B.DOW[d.getUTCDay()].toUpperCase()+"   "+B.fmtShort(d),
+        {font:font(11,true,"FFFFFFFF"),fill:ACC}));
+      set(ws,2,7,"TIMES",{font:font(9,true,"FFFFFFFF"),fill:ACC}); ws.getRow(2).height=22;
+      set(ws,3,1,"ROTATION DAY",{font:font(9,true,"FFFFFFFF"),fill:ACC});
+      set(ws,3,7,"",{fill:ACC});
+      set(ws,4,1,"SCHOOL NOTES",{font:font(9,true),fill:GREY}); set(ws,4,7,"",{fill:GREY});
+      ws.getRow(3).height=26; ws.getRow(4).height=24;
+      const info=days.map(d=>({ds:B.iso(d),i:B.dayInfo(B.iso(d))}));
+      const res=info.map(x=>x.i.type==="day"?B.resolveDay(x.i.dn,x.ds):null);
+      info.forEach((x,i)=>{
+        const t=x.i.type, c=2+i;
+        if(t==="day")          set(ws,3,c,"DAY "+x.i.dn,{font:font(13,true,"FFFFFFFF"),fill:DARK});
+        else if(t==="closed")  set(ws,3,c,x.i.banner,{font:font(11,true,"FF7F2A2A"),fill:CLOSED});
+        else if(t==="snow")    set(ws,3,c,"SNOW MAKE-UP",{font:font(11,true,"FF7F2A2A"),fill:CLOSED});
+        else if(t==="last")    set(ws,3,c,"LAST DAY",{font:font(11,true,"FFFFFFFF"),fill:"FF7F2A2A"});
+        else if(t==="exam")    set(ws,3,c,x.i.banner,{font:font(11,true,"FFFFFFFF"),fill:"FF7B4B6B"});
+        else if(t==="mcas")    set(ws,3,c,"MCAS TESTING",{font:font(11,true,"FFFFFFFF"),fill:"FF3F6E8C"});
+        else if(t==="special") set(ws,3,c,x.i.banner,{font:font(11,true,"FF7F4F00"),fill:EARLY});
+        else                   set(ws,3,c,"—",{font:font(10,true,"FF7F7F7F"),fill:CLOSED});
+        const ev=D.events[x.ds]||(t==="closed"?x.i.why:"")||(t==="special"?x.i.note:"")||
+                 (t==="mcas"?"Grade 10 MCAS":"")||(t==="snow"?"only if snow days were used":"");
+        set(ws,4,c,ev,{font:font(9,true,"FF7F4F00"),fill:ev?EVENT:GREY});
+      });
+      const H={arr:28,z:17,p1:42,p2:42,p3a:54,p3b:54,p4:42,p5:54,dis:24};
+      let rowBase=5;
+      if(bs){
+        ws.getRow(rowBase).height=20;
+        set(ws,rowBase,1,"BEFORE SCHOOL",{font:font(9,true)});
+        set(ws,rowBase,7,"before Z Block",{font:font(8,false,"FF1F3864")});
+        info.forEach((x2,i)=>{
+          const wd=B.mkDate(x2.ds).getUTCDay();
+          const on=bs.days.includes(wd)&&["closed","snow","none"].indexOf(x2.i.type)<0;
+          set(ws,rowBase,2+i,on?(bs.time+"  ·  "+bs.what):"",{font:font(9,true,"FF2C5340"),fill:"FFEEF4EC"});
+        });
+        rowBase++;
+      }
+      ROWS.forEach(([k,label,times],ri)=>{
+        const r=rowBase+ri; ws.getRow(r).height=H[k];
+        set(ws,r,1,label,{font:font(9,k==="arr"||k==="dis"),fill:(k==="arr"||k==="dis")?ACCBG:"FFFFFFFF"});
+        set(ws,r,7,times,{font:font(8,k==="dis","FF1F3864"),fill:(k==="arr"||k==="dis")?ACCBG:"FFFFFFFF"});
+        info.forEach((x,i)=>{
+          const c=2+i, t=x.i.type, g=res[i];
+          if(t==="day"){
+            if(k==="arr") set(ws,r,c,g.arrival[0]+(g.arrival[1]?"\n** LATE START **":""),
+                 {font:font(12,true,g.arrival[1]?"FF9C1F3E":"FF1F3864"),fill:g.arrival[1]?LATE:ACCBG});
+            else if(k==="dis") set(ws,r,c,g.dismissal[0],
+                 {font:font(12,true,g.dismissal[1]?"FF7F2A2A":"FF1F3864"),fill:g.dismissal[1]?EARLY:ACCBG});
+            else if(k==="z") set(ws,r,c,"free — no class",{font:font(8,false,"FF7F7F7F")});
+            else { const cc=g.cells[k];
+              const bg = cc.color?HEX(cc.color):(cc.kind==="lunch"?"FFEFEFEF":(cc.kind==="t"?"FFE2E2F0":
+                         (cc.kind==="free"?"FFF7F7F7":"FFFFFFFF")));
+              const nn=(cc.notes||[]).filter(Boolean);
+              set(ws,r,c,cc.name+"\n"+cc.meta+(nn.length?"\n"+nn.join(" · "):""),
+                  {font:font(10,cc.kind!=="free",cc.kind==="free"?"FF8C8C8C":"FF000000"),fill:bg});
+              if(nn.length) ws.getRow(r).height=Math.max(ws.getRow(r).height||0,H[k]+11); }
+          } else if(t==="closed"||t==="snow"||t==="none"){
+            set(ws,r,c,k==="p2"?(t==="snow"?"reserved make-up day":"— no school —"):"",
+                {font:font(10,true,"FF7F7F7F"),fill:CLOSED});
+          } else if(t==="exam"){
+            set(ws,r,c,(k==="arr"||k==="dis")?"see exam\nschedule":(k==="p2"?"Exam schedule not published —\nwrite in each exam and its time":""),
+                {font:font(9,k==="arr"||k==="dis","FF7B4B6B"),fill:(k==="arr"||k==="dis"||k==="p2")?EXAM:"FFFFFFFF"});
+          } else if(t==="mcas"){
+            let v=""; if(k==="arr"||k==="dis") v="see MCAS\nschedule";
+            else if(k==="p2") v="SESSION 1\n"+mcasList(D.mcasS1,x.ds);
+            else if(k==="p4") v="SESSION 2\n"+mcasList(D.mcasS2,x.ds);
+            else if(k==="p3a") v="times not published";
+            set(ws,r,c,v,{font:font(9,true,"FF1F3864"),fill:v?MCASF:"FFFFFFFF"});
+          } else if(t==="last"){
+            set(ws,r,c,k==="p2"?"Last day of school\nSchedule not published":"",{font:font(9,true,"FF7F2A2A"),fill:"FFFDECEC"});
+          } else {
+            let v=""; if(k==="arr") v="8:20 AM"; else if(k==="dis") v=x.i.dismissal;
+            else if(k==="p2") v="Special schedule —\nclasses shortened"; else if(k==="z") v="free";
+            set(ws,r,c,v,{font:font(10,true,"FF7F4F00"),fill:EARLY});
+          }
+        });
+      });
+      let r=rowBase+ROWS.length;
+      if(eve.length){
+        ws.mergeCells(r,1,r,7);
+        set(ws,r,1,"AFTER SCHOOL  →  "+eve[eve.length-1].label+"      (write in activities, appointments, plans, homework)",
+            {font:font(9,true,"FFFFFFFF"),fill:ACC,align:{vertical:"middle",horizontal:"left"}});
+        ws.getRow(r).height=16; r++;
+        eve.forEach(row=>{
+          ws.getRow(r).height=26;
+          set(ws,r,1,row.label,{font:font(9,row.flag),fill:row.flag?EVENT:"FFFFFFFF"});
+          for(let i=2;i<=6;i++) set(ws,r,i,"",{fill:row.flag?EVENT:"FFFFFFFF"});
+          set(ws,r,7,row.label,{font:font(8,row.flag,"FF1F3864"),fill:row.flag?EVENT:"FFFFFFFF"});
+          r++;
+        });
+      }
+      ws.pageSetup.printArea="A1:G"+(r-1);
+    });
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const filename=(who?who.replace(/[^\w\-]+/g,"_")+"_":"")+"High_Key_Weekly_Planner.xlsx";
+    // Hosted on claude.ai the page must hand the file over through the downloads
+    // capability; served as a plain file anywhere else, a normal link works.
+    let saver=null;
+    try{ saver = window.claude && claude.use ? await claude.use("downloads") : null; }catch(e){ saver=null; }
+    if(saver){
+      try{
+        await saver.save({filename, data:blob});
+        out.className="msg ok"; out.textContent="Spreadsheet saved.";
+      }catch(err){
+        if(err && err.code==="declined"){ out.className="msg warn"; out.textContent="Download cancelled."; }
+        else { out.className="msg warn";
+               out.textContent="Couldn't save the spreadsheet here. Use Print / Save as PDF — it gives the same pages."; }
+      }
+      return;
+    }
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    out.className="msg ok";
+    out.textContent="Spreadsheet downloaded. If nothing appeared, your browser blocked it — use Print / Save as PDF instead.";
+  }catch(e){
+    out.className="msg err";
+    out.textContent="Couldn't build the spreadsheet ("+e.message+"). Use Print / Save as PDF instead — it gives the same pages.";
+  }
+};
+function mcasList(letters, ds){
+  const names=[];
+  for(let d=1;d<=6;d++) for(let p=1;p<=5;p++){
+    const b=D.blockMap[d+"-"+p]; if(!b||letters.indexOf(b[0])<0) continue;
+    const c=B.pick(d+"-"+p, ds); if(c&&names.indexOf(c.desc)<0) names.push(c.desc);
+  }
+  return names.length?names.join(", "):"—";
+}
+})();
+
+</script>
+
+</body>
+</html>
