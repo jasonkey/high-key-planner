@@ -31,7 +31,7 @@ const ROWS=[["arr","ARRIVAL","1st period 8:20\n2nd period 9:37"],
             ["p3b","3rd Period\n2nd half","Class 2: 11:21-12:31\nLunch 2: 12:06-12:36"],
             ["p4","4th Period","12:38 - 1:48"],["p5","5th Period","1:55 - 3:05"],
             ["dis","DISMISSAL","3:05 PM\n(2:15 PM on Day 6)"]];
-const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nl=s=>esc(s).replace(/\n/g,"<br>");
 
 /* A made-up schedule, used only for the "try it" button. No real student or teacher. */
