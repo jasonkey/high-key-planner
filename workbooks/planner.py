@@ -114,15 +114,25 @@ DARK="2F3E52"; ACCENT="44607F"; GREY="F2F2F2"; CLOSEDF="D9D9D9"; EVENTF="FFF2CC"
 LATEF="FFE2E8"; EARLYF="FCE4D6"; EXAMF="F3E8EF"; EXAMC="7B4B6B"; MCASF="E4EEF6"
 
 R_TITLE,R_DAY,R_NUM,R_EVT,R_ARR,R_Z,R_P1,R_P2,R_P3A,R_P3B,R_P4,R_P5,R_DIS,R_AFT = range(1,15)
+ALL_WEEKDAYS=(1,2,3,4,5)          # Mon-Fri, matching the web tool's checkboxes
+
 def evening_rows(note=None):
-    """Hourly write-in rows 3 PM - 10 PM, plus one optional recurring note row."""
+    """Hourly write-in rows 3 PM - 10 PM, plus one optional recurring note row.
+
+    note is (time, what) or (time, what, weekdays), where weekdays are 1-5 for
+    Mon-Fri. The note row carries the time in the label column and its text in
+    the day cells, so it can apply to some weekdays only — the same shape the
+    before-school row has always had, and what the web tool's checkboxes set.
+    """
     hours=["3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM"]
+    days=tuple(note[2]) if (note and len(note)>2) else ALL_WEEKDAYS
     labels=[]
     for h in hours:
-        labels.append((h,False))
-        if note and note[0].startswith(h.split(":")[0]+":"): labels.append((note[1]+"  "+note[0],True))
-    return [(lab,15+i,flag) for i,(lab,flag) in enumerate(labels)]
-EVE=[(l,r) for l,r,_ in evening_rows()]
+        labels.append((h,False,"",()))
+        if note and note[0].startswith(h.split(":")[0]+":"):
+            labels.append((note[0],True,note[1],days))
+    return [(lab,15+i,flag,what,dd) for i,(lab,flag,what,dd) in enumerate(labels)]
+EVE=[(l,r) for l,r,_,_,_ in evening_rows()]
 LAST_ROW=22
 LABELS={R_ARR:"ARRIVAL",R_Z:"Z Block  (free)",R_P1:"1st Period",R_P2:"2nd Period",
         R_P3A:"3rd Period\n1st half",R_P3B:"3rd Period\n2nd half",R_P4:"4th Period",
@@ -243,7 +253,7 @@ def mondays():
 
 # ---------------- weekly sheet ----------------
 def build_week(wb, monday, spec, subtitle):
-    EVE=[(l,r,f) for l,r,f in evening_rows((spec or {}).get("evening_note"))]
+    EVE=[(l,r,f,w,dd) for l,r,f,w,dd in evening_rows((spec or {}).get("evening_note"))]
     LAST=EVE[-1][1]
     days=[monday+dt.timedelta(days=i) for i in range(5)]
     ws=wb.create_sheet(monday.strftime("%b %-d"))
@@ -266,7 +276,7 @@ def build_week(wb, monday, spec, subtitle):
     ws.merge_cells(start_row=R_AFT,start_column=1,end_row=R_AFT,end_column=7)
     a=ws.cell(R_AFT,1,"AFTER SCHOOL  →  10:00 PM          (write in activities, appointments, plans, cooking duty, homework)")
     a.font=F(9,True,"FFFFFF"); a.fill=fill(ACCENT); a.alignment=LEFT
-    for t,r,flag in EVE:
+    for t,r,flag,_w,_dd in EVE:
         cc=ws.cell(r,1,t); cc.font=F(9,flag); cc.alignment=CEN
         cc.fill=fill(EVENTF if flag else "FFFFFF")
 
@@ -276,7 +286,7 @@ def build_week(wb, monday, spec, subtitle):
     for r,txt in TIMES.items():
         cc=ws.cell(r,7,txt); cc.font=F(8,r==R_DIS,"1F3864"); cc.alignment=CEN
         cc.fill=fill("E8EDF2" if r==R_DIS else "FFFFFF")
-    for t_,r,flag in EVE:
+    for t_,r,flag,_w,_dd in EVE:
         cc=ws.cell(r,7,t_); cc.font=F(8,flag,"1F3864"); cc.alignment=CEN
         cc.fill=fill(EVENTF if flag else "FFFFFF")
 
@@ -376,8 +386,11 @@ def build_week(wb, monday, spec, subtitle):
         else:
             flat(col,CLOSEDF,"—","")
 
-        for t_,r,flag in EVE:
-            cc=ws.cell(r,col,""); cc.fill=fill(EVENTF if flag else "FFFFFF")
+        for t_,r,flag,what,edays in EVE:
+            on = flag and what and (day.weekday()+1) in edays
+            cc=ws.cell(r,col, what if on else "")
+            cc.font=F(9,True); cc.alignment=CEN
+            cc.fill=fill(EVENTF if on else "FFFFFF")
             cc.border=Border(left=thin,right=thin,top=hair,bottom=hair)
 
     for r in range(R_DAY,LAST+1):

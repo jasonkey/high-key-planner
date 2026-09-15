@@ -218,7 +218,7 @@ table.week .eve.dinner{background:var(--event);font-weight:700}
           <span class="nlab">Evening</span>
           <input type="text" id="evTime" placeholder="6:15 PM" style="width:92px">
           <input type="text" id="evWhat" placeholder="what it is — e.g. Dinner, Practice" style="flex:1;min-width:180px">
-          <span class="meets">every day</span>
+          <span class="days" id="evDays"></span>
         </div>
         <p class="fine">A before-school note prints on its own row <em>above</em> the arrival time, so a
           late start is never hidden. Leave either row blank to skip it.</p>
@@ -493,8 +493,10 @@ function eveningRows(){
   const end=+($("#evening").value||0); if(!end) return [];
   const note=noteOf("ev"), rows=[];
   for(let h=15;h<=end;h++){
-    rows.push({label:hourLabel(h), flag:false});
-    if(note && note.hour===h) rows.push({label:note.what+"  "+note.time, flag:true});
+    rows.push({label:hourLabel(h), flag:false, what:"", days:[]});
+    // The note row puts the time in the label column and its text in the day
+    // cells, so it can apply to some weekdays only — the BEFORE SCHOOL shape.
+    if(note && note.hour===h) rows.push({label:note.time, flag:true, what:note.what, days:note.days});
   }
   return rows;
 }
@@ -541,7 +543,7 @@ function checkNoteTimes(){
 function noteOf(pfx){
   const t=parseTime($("#"+pfx+"Time").value, pfx==="bs"?"am":"pm"), w=($("#"+pfx+"What").value||"").trim();
   if(!t||!w) return null;
-  const days = pfx==="bs" ? [...document.querySelectorAll("#bsDays input:checked")].map(i=>+i.value) : [1,2,3,4,5];
+  const days = [...document.querySelectorAll("#"+pfx+"Days input:checked")].map(i=>+i.value);
   if(!days.length) return null;
   return {hour:t.hour, time:t.time, what:w, days};
 }
@@ -824,11 +826,18 @@ function renderWeeks(){
     });
     const eve=eveningRows();
     if(eve.length){
-      h+='<tr><td class="afthdr" colspan="7">AFTER SCHOOL  →  '+esc(eve[eve.length-1].label)+
+      // the header names the last hour, which is not the note row when the note
+      // sits in the final hour
+      const endRow=eve.filter(r=>!r.flag).pop()||eve[eve.length-1];
+      h+='<tr><td class="afthdr" colspan="7">AFTER SCHOOL  →  '+esc(endRow.label)+
          '      (write in activities, appointments, plans, homework)</td></tr>';
       eve.forEach(r=>{
         h+='<tr><td class="eve lab'+(r.flag?" dinner":"")+'">'+esc(r.label)+"</td>";
-        for(let i=0;i<5;i++) h+='<td class="eve'+(r.flag?" dinner":"")+'"></td>';
+        info.forEach(x=>{
+          const wd=x.d.getUTCDay();
+          const on=r.flag && r.days.includes(wd) && ["closed","snow","none"].indexOf(x.i.type)<0;
+          h+='<td class="eve'+(on?" dinner":"")+'">'+(on?esc(r.what):"")+"</td>";
+        });
         h+='<td class="eve lab'+(r.flag?" dinner":"")+'">'+esc(r.label)+"</td></tr>";
       });
     }
@@ -863,8 +872,10 @@ function build(){
 }
 (function(){
   const names=["Mon","Tue","Wed","Thu","Fri"];
-  $("#bsDays").innerHTML=names.map((n,i)=>
-    '<label><input type="checkbox" value="'+(i+1)+'" checked id="bsd'+(i+1)+'">'+n+"</label>").join("");
+  ["bs","ev"].forEach(pfx=>{
+    $("#"+pfx+"Days").innerHTML=names.map((n,i)=>
+      '<label><input type="checkbox" value="'+(i+1)+'" checked id="'+pfx+'d'+(i+1)+'">'+n+"</label>").join("");
+  });
 })();
 $("#btnParse").onclick=doParse;
 $("#btnDemo").onclick=()=>{ $("#paste").value=DEMO; doParse();
@@ -874,7 +885,8 @@ $("#btnClear").onclick=()=>{ $("#paste").value=""; $("#parseMsg").className="msg
 $("#btnBuild").onclick=build;
 $("#btnPrint").onclick=()=>{ renderWeeks(); window.print(); };
 $("#btnXlsx").onclick=()=>window.__XLSX__ && window.__XLSX__();
-["range","evening","who","bsTime","bsWhat","evTime","evWhat","bsd1","bsd2","bsd3","bsd4","bsd5"].forEach(id=>{
+["range","evening","who","bsTime","bsWhat","evTime","evWhat",
+ "bsd1","bsd2","bsd3","bsd4","bsd5","evd1","evd2","evd3","evd4","evd5"].forEach(id=>{
   const el=$("#"+id); if(!el) return;
   const go=()=>{ if($("#outCard").style.display==="block") build(); };
   el.onchange=go; if(el.tagName==="INPUT"&&el.type==="text") el.onblur=go;
@@ -1020,13 +1032,18 @@ window.__XLSX__=async function(){
       let r=rowBase+ROWS.length;
       if(eve.length){
         ws.mergeCells(r,1,r,7);
-        set(ws,r,1,"AFTER SCHOOL  →  "+eve[eve.length-1].label+"      (write in activities, appointments, plans, homework)",
+        const endRow=eve.filter(x=>!x.flag).pop()||eve[eve.length-1];
+        set(ws,r,1,"AFTER SCHOOL  →  "+endRow.label+"      (write in activities, appointments, plans, homework)",
             {font:font(9,true,"FFFFFFFF"),fill:ACC,align:{vertical:"middle",horizontal:"left"}});
         ws.getRow(r).height=16; r++;
         eve.forEach(row=>{
           ws.getRow(r).height=26;
           set(ws,r,1,row.label,{font:font(9,row.flag),fill:row.flag?EVENT:"FFFFFFFF"});
-          for(let i=2;i<=6;i++) set(ws,r,i,"",{fill:row.flag?EVENT:"FFFFFFFF"});
+          info.forEach((x2,i)=>{
+            const wd=B.mkDate(x2.ds).getUTCDay();
+            const on=row.flag && row.days.includes(wd) && ["closed","snow","none"].indexOf(x2.i.type)<0;
+            set(ws,r,2+i,on?row.what:"",{font:font(9,true),fill:on?EVENT:"FFFFFFFF"});
+          });
           set(ws,r,7,row.label,{font:font(8,row.flag,"FF1F3864"),fill:row.flag?EVENT:"FFFFFFFF"});
           r++;
         });

@@ -6,8 +6,10 @@ function eveningRows(){
   const end=+($("#evening").value||0); if(!end) return [];
   const note=noteOf("ev"), rows=[];
   for(let h=15;h<=end;h++){
-    rows.push({label:hourLabel(h), flag:false});
-    if(note && note.hour===h) rows.push({label:note.what+"  "+note.time, flag:true});
+    rows.push({label:hourLabel(h), flag:false, what:"", days:[]});
+    // The note row puts the time in the label column and its text in the day
+    // cells, so it can apply to some weekdays only — the BEFORE SCHOOL shape.
+    if(note && note.hour===h) rows.push({label:note.time, flag:true, what:note.what, days:note.days});
   }
   return rows;
 }
@@ -54,7 +56,7 @@ function checkNoteTimes(){
 function noteOf(pfx){
   const t=parseTime($("#"+pfx+"Time").value, pfx==="bs"?"am":"pm"), w=($("#"+pfx+"What").value||"").trim();
   if(!t||!w) return null;
-  const days = pfx==="bs" ? [...document.querySelectorAll("#bsDays input:checked")].map(i=>+i.value) : [1,2,3,4,5];
+  const days = [...document.querySelectorAll("#"+pfx+"Days input:checked")].map(i=>+i.value);
   if(!days.length) return null;
   return {hour:t.hour, time:t.time, what:w, days};
 }
@@ -337,11 +339,18 @@ function renderWeeks(){
     });
     const eve=eveningRows();
     if(eve.length){
-      h+='<tr><td class="afthdr" colspan="7">AFTER SCHOOL  →  '+esc(eve[eve.length-1].label)+
+      // the header names the last hour, which is not the note row when the note
+      // sits in the final hour
+      const endRow=eve.filter(r=>!r.flag).pop()||eve[eve.length-1];
+      h+='<tr><td class="afthdr" colspan="7">AFTER SCHOOL  →  '+esc(endRow.label)+
          '      (write in activities, appointments, plans, homework)</td></tr>';
       eve.forEach(r=>{
         h+='<tr><td class="eve lab'+(r.flag?" dinner":"")+'">'+esc(r.label)+"</td>";
-        for(let i=0;i<5;i++) h+='<td class="eve'+(r.flag?" dinner":"")+'"></td>';
+        info.forEach(x=>{
+          const wd=x.d.getUTCDay();
+          const on=r.flag && r.days.includes(wd) && ["closed","snow","none"].indexOf(x.i.type)<0;
+          h+='<td class="eve'+(on?" dinner":"")+'">'+(on?esc(r.what):"")+"</td>";
+        });
         h+='<td class="eve lab'+(r.flag?" dinner":"")+'">'+esc(r.label)+"</td></tr>";
       });
     }
@@ -376,8 +385,10 @@ function build(){
 }
 (function(){
   const names=["Mon","Tue","Wed","Thu","Fri"];
-  $("#bsDays").innerHTML=names.map((n,i)=>
-    '<label><input type="checkbox" value="'+(i+1)+'" checked id="bsd'+(i+1)+'">'+n+"</label>").join("");
+  ["bs","ev"].forEach(pfx=>{
+    $("#"+pfx+"Days").innerHTML=names.map((n,i)=>
+      '<label><input type="checkbox" value="'+(i+1)+'" checked id="'+pfx+'d'+(i+1)+'">'+n+"</label>").join("");
+  });
 })();
 $("#btnParse").onclick=doParse;
 $("#btnDemo").onclick=()=>{ $("#paste").value=DEMO; doParse();
@@ -387,7 +398,8 @@ $("#btnClear").onclick=()=>{ $("#paste").value=""; $("#parseMsg").className="msg
 $("#btnBuild").onclick=build;
 $("#btnPrint").onclick=()=>{ renderWeeks(); window.print(); };
 $("#btnXlsx").onclick=()=>window.__XLSX__ && window.__XLSX__();
-["range","evening","who","bsTime","bsWhat","evTime","evWhat","bsd1","bsd2","bsd3","bsd4","bsd5"].forEach(id=>{
+["range","evening","who","bsTime","bsWhat","evTime","evWhat",
+ "bsd1","bsd2","bsd3","bsd4","bsd5","evd1","evd2","evd3","evd4","evd5"].forEach(id=>{
   const el=$("#"+id); if(!el) return;
   const go=()=>{ if($("#outCard").style.display==="block") build(); };
   el.onchange=go; if(el.tagName==="INPUT"&&el.type==="text") el.onblur=go;

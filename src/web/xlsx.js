@@ -135,13 +135,18 @@ window.__XLSX__=async function(){
       let r=rowBase+ROWS.length;
       if(eve.length){
         ws.mergeCells(r,1,r,7);
-        set(ws,r,1,"AFTER SCHOOL  →  "+eve[eve.length-1].label+"      (write in activities, appointments, plans, homework)",
+        const endRow=eve.filter(x=>!x.flag).pop()||eve[eve.length-1];
+        set(ws,r,1,"AFTER SCHOOL  →  "+endRow.label+"      (write in activities, appointments, plans, homework)",
             {font:font(9,true,"FFFFFFFF"),fill:ACC,align:{vertical:"middle",horizontal:"left"}});
         ws.getRow(r).height=16; r++;
         eve.forEach(row=>{
           ws.getRow(r).height=26;
           set(ws,r,1,row.label,{font:font(9,row.flag),fill:row.flag?EVENT:"FFFFFFFF"});
-          for(let i=2;i<=6;i++) set(ws,r,i,"",{fill:row.flag?EVENT:"FFFFFFFF"});
+          info.forEach((x2,i)=>{
+            const wd=B.mkDate(x2.ds).getUTCDay();
+            const on=row.flag && row.days.includes(wd) && ["closed","snow","none"].indexOf(x2.i.type)<0;
+            set(ws,r,2+i,on?row.what:"",{font:font(9,true),fill:on?EVENT:"FFFFFFFF"});
+          });
           set(ws,r,7,row.label,{font:font(8,row.flag,"FF1F3864"),fill:row.flag?EVENT:"FFFFFFFF"});
           r++;
         });
