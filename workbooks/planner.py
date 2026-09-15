@@ -96,6 +96,12 @@ BLOCKMAP = {
 }
 CLASS1_LUNCH2 = {"CE","FP","TE","MA","PA","SC","VA","WE"}
 
+# Terms a weekly page can actually place. BHS also runs courses shorter than a
+# semester — the ACE program's are trimester-length, six weeks each — and Aspen
+# labels those with terms resolve_day cannot put on a date. Such a course is
+# reported rather than dropped in silence. Mirrored in app.js PLACEABLE_TERMS.
+PLACEABLE_TERMS = ("FY", "S1", "S2")
+
 # ---------------- styling ----------------
 FONT="Arial"
 thin=Side(style="thin",color="B7B7B7"); med=Side(style="medium",color="595959"); hair=Side(style="hair",color="CCCCCC")
@@ -140,6 +146,28 @@ def course_for(spec, letter, day):
     for c in entries:
         if c.get("term","FY") in ("FY", sem): return c
     return None
+
+def unplaceable_courses(spec):
+    """[(block letter, course)] whose term resolve_day cannot place on a date."""
+    out=[]
+    for letter, entries in spec.get("courses",{}).items():
+        if isinstance(entries, dict): entries=[entries]
+        for c in entries:
+            if str(c.get("term","FY")).upper() not in PLACEABLE_TERMS:
+                out.append((letter,c))
+    return out
+
+def unplaceable_lines(spec):
+    """Warning lines for the KEY tab and the console. Empty when all is well."""
+    bad=unplaceable_courses(spec)
+    if not bad: return []
+    lines=["The planner places full-year and semester courses (FY, S1, S2).",
+           "These carry a different term, so they are NOT on the weekly pages —",
+           "write them in by hand:"]
+    for letter,c in bad:
+        lines.append("    %s block - %s (%s, term %s)" % (
+            letter, c.get("title","?"), c.get("code","?"), c.get("term","?")))
+    return lines
 
 def _who(c):
     bits=[]

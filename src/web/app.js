@@ -108,6 +108,14 @@ function indexCourses(){
     r.meets.forEach(s=>{ const k=s.day+"-"+s.per; (SLOTS[k]=SLOTS[k]||[]).push(r); });
   });
 }
+/* Terms a weekly page can actually place. BHS also runs courses shorter than a
+   semester — the ACE program's are trimester-length, six weeks each — and Aspen
+   labels those with terms pick() cannot put on a date. Such a course is surfaced
+   as a warning in step 2 rather than dropped in silence.
+   Mirrored in planner.py PLACEABLE_TERMS. */
+const PLACEABLE_TERMS=["FY","S1","S2"];
+function termPlaceable(t){ return PLACEABLE_TERMS.indexOf(String(t||"FY").toUpperCase())>=0; }
+
 function pick(key, dateStr){
   const list=SLOTS[key]; if(!list||!list.length) return null;
   const sem = (dateStr && dateStr >= D.sem2Start) ? "S2" : "S1";
@@ -190,7 +198,8 @@ function dayInfo(ds){
   if(D.dayNum[ds]!==undefined) return {type:"day", dn:D.dayNum[ds]};
   return {type:"none"};
 }
-window.__BHS__ = {parseAspen, resolveDay, dayInfo, indexCourses, deptOK, DEPTS, slotConflicts, splitRows,
+window.__BHS__ = {parseAspen, resolveDay, dayInfo, indexCourses, deptOK, DEPTS, termPlaceable,
+  PLACEABLE_TERMS, slotConflicts, splitRows,
   get COURSES(){return COURSES;}, set COURSES(v){COURSES=v;},
   get SLOTS(){return SLOTS;}, pick, pmFor, PALETTE,
   iso, mkDate, addDays, fmtLong, fmtShort, DOW, D};

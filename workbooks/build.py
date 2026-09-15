@@ -12,7 +12,8 @@ so no real schedule ever reaches the repository.
 import sys, os, runpy
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from openpyxl import Workbook
-from planner import mondays, build_week, build_blank_key, build_student_key
+from planner import (mondays, build_week, build_blank_key, build_student_key,
+                     unplaceable_lines)
 
 TITLE = "HIGH KEY  ·  BHS WEEKLY PLANNER"
 
@@ -41,8 +42,15 @@ def main(argv):
     mod = runpy.run_path(argv[1])
     spec = mod["STUDENT"]
     name = spec.get("name", "student")
+    extra = list(mod.get("NOTES") or [])
+    warn = unplaceable_lines(spec)
+    if warn:
+        sys.stderr.write("WARNING: some courses are not on the weekly pages\n")
+        for line in warn:
+            sys.stderr.write("  " + line + "\n")
+        extra.insert(0, ("COURSES NOT PLACED ON THE WEEKLY PAGES", warn))
     emit(spec, name.upper() + "  ·  " + TITLE,
-         "High_Key_Planner_%s.xlsx" % name, mod.get("NOTES"))
+         "High_Key_Planner_%s.xlsx" % name, extra)
     return 0
 
 

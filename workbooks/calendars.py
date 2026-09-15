@@ -66,6 +66,9 @@ def main(argv):
     salt = name.lower()
     last_day, q3 = window(spec, mod)
 
+    for line in p.unplaceable_lines(spec):
+        sys.stderr.write("  " + line + "\n")
+
     for fn, n in I.build(spec, name, salt, last_day, q3, name):
         print("%-34s %3d events" % (fn, n))
 

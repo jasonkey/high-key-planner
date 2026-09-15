@@ -100,6 +100,13 @@ function renderEdit(){
     del.textContent="Course code not recognised for "+badDept.map(r=>r.code).join(", ")+
       ". The first two letters decide which lunch the student gets, so check those against Aspen."; }
   else del.style.display="none";
+  const oddTerm=B.COURSES.filter(r=>r.meets.length && !B.termPlaceable(r.term));
+  const tel=$("#termNote");
+  if(oddTerm.length){ tel.style.display="block"; tel.className="msg warn";
+    tel.textContent="Term not recognised for "+oddTerm.map(r=>r.desc+" ("+r.term+")").join("; ")+
+      ". The planner can place full-year and semester courses (FY, S1, S2); this one is left off "+
+      "the weekly pages rather than guessed at. Write it in by hand."; }
+  else tel.style.display="none";
   const pm=B.COURSES.filter(r=>r.pm);
   if(pm.length){ const el=$("#pmNote"); el.style.display="block"; el.className="msg warn";
     el.textContent="PM block: "+pm.map(r=>r.desc+" ("+r.term+", day "+r.pm.join(" & ")+")").join("; ")+
