@@ -371,7 +371,7 @@ function build(){
   $("#outCard").style.display="block";
   const label=$("#range").selectedOptions[0].textContent;
   $("#outInfo").textContent=n+" page"+(n===1?"":"s")+" — "+label.toLowerCase()+".";
-  msg($("#outMsg"),"ok","Printing gives you one landscape page per week. Set your browser to print backgrounds so the colours come through.");
+  msg($("#outMsg"),"ok","Printing gives you one landscape page per week, in the same colours you see here. If your browser still prints plain boxes, turn on \"Background graphics\" in its print dialog.");
   $("#outCard").scrollIntoView({behavior:"smooth",block:"start"});
 }
 (function(){
