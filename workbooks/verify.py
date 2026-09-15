@@ -62,6 +62,7 @@ def audit(fn, titles, s2=None, late_days=(), lunch1_days=()):
         elif day in p.MCAS_DAYS: ok="MCAS" in num
         elif day in p.SPECIAL:   ok="SPECIAL" in num
         elif day in p.DAYNUM:    ok=(num=="DAY %d"%p.DAYNUM[day])
+        elif day>p.LAST_DAY:     ok=(num=="\u2014")   # tail of the snow make-up week
         else: ok=False
         if not ok: errs.append(f"{day}: classification {num!r}")
         if day in p.DAYNUM:

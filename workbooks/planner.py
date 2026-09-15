@@ -230,8 +230,15 @@ def mcas_lists(spec, day):
     return names(MCAS_S1), names(MCAS_S2)
 
 def mondays():
+    """Monday of every printed week.
+
+    Runs past LAST_DAY when a reserved snow make-up day falls in a later week:
+    Jun 28 is a Monday of its own, and without this it had no page at all, in
+    the workbook or on the web. The rest of that week renders as "—".
+    """
+    end=max([LAST_DAY]+list(SNOW_DAYS))
     out=[]; m=D(2026,9,14)
-    while m<=D(2027,6,21): out.append(m); m+=dt.timedelta(days=7)
+    while m<=end: out.append(m); m+=dt.timedelta(days=7)
     return out
 
 # ---------------- weekly sheet ----------------

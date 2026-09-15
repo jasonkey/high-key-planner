@@ -11,14 +11,48 @@ function eveningRows(){
   }
   return rows;
 }
-function parseTime(s){
-  const m=String(s||"").trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?$/i);
-  if(!m) return null;
-  let h=+m[1]%12; if(m[3].toLowerCase()==="p") h+=12;
-  return {hour:h, minute:m[2]?+m[2]:0, time:((h%12)||12)+":"+(m[2]||"00")+" "+(m[3].toUpperCase()+"M")};
+/* Accepts "7:00 AM", "7am", "7:00", "07:00" and "19:00". A bare hour is
+   ambiguous, so the caller says which way to read it: the before-school row
+   means AM, the evening row PM. Anything else returns null, and the caller
+   puts a message on screen rather than dropping the row in silence. */
+function parseTime(s, dflt){
+  const raw=String(s||"").trim(); if(!raw) return null;
+  const mk=(h,mm)=>({hour:h, minute:mm?+mm:0,
+    time:((h%12)||12)+":"+(mm||"00")+" "+(h<12?"AM":"PM")});
+  let m=raw.match(/^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?$/i);
+  if(m){
+    const hh=+m[1], mm=m[2];
+    if(hh<1||hh>12||(mm&&+mm>59)) return null;
+    let h=hh%12; if(m[3].toLowerCase()==="p") h+=12;
+    return mk(h,mm);
+  }
+  m=raw.match(/^(\d{1,2})(?::(\d{2}))?$/);
+  if(m){
+    let h=+m[1]; const mm=m[2];
+    if(h>23||(mm&&+mm>59)) return null;
+    if(h<=12 && dflt==="pm" && h!==12) h+=12;
+    return mk(h,mm);
+  }
+  return null;
+}
+/* Both recurring-note rows, checked together so the message names every bad one. */
+function checkNoteTimes(){
+  const bad=[];
+  [["bs","before-school"],["ev","evening"]].forEach(pair=>{
+    const pfx=pair[0], label=pair[1];
+    const t=($("#"+pfx+"Time").value||"").trim(), w=($("#"+pfx+"What").value||"").trim();
+    if(t && !parseTime(t, pfx==="bs"?"am":"pm")) bad.push(label+' time "'+t+'"');
+    else if(!t && w) bad.push(label+" note has text but no time");
+  });
+  const el=$("#noteMsg");
+  if(bad.length){ el.style.display="block"; el.className="msg err";
+    el.textContent="Could not read the "+bad.join(", and the ")+
+      ". Use a time like 7:00 AM, 7:00 or 19:00 — otherwise that row is left off the pages."; }
+  else { el.className="msg"; el.style.display="none"; }
+  return bad.length===0;
 }
 function noteOf(pfx){
-  const t=parseTime($("#"+pfx+"Time").value), w=($("#"+pfx+"What").value||"").trim();
+  const t=parseTime($("#"+pfx+"Time").value, pfx==="bs"?"am":"pm"), w=($("#"+pfx+"What").value||"").trim();
   if(!t||!w) return null;
   const days = pfx==="bs" ? [...document.querySelectorAll("#bsDays input:checked")].map(i=>+i.value) : [1,2,3,4,5];
   if(!days.length) return null;
@@ -108,9 +142,11 @@ function renderEdit(){
       "the weekly pages rather than guessed at. Write it in by hand."; }
   else tel.style.display="none";
   const pm=B.COURSES.filter(r=>r.pm);
-  if(pm.length){ const el=$("#pmNote"); el.style.display="block"; el.className="msg warn";
-    el.textContent="PM block: "+pm.map(r=>r.desc+" ("+r.term+", day "+r.pm.join(" & ")+")").join("; ")+
+  const pel=$("#pmNote");
+  if(pm.length){ pel.style.display="block"; pel.className="msg warn";
+    pel.textContent="PM block: "+pm.map(r=>r.desc+" ("+r.term+", day "+r.pm.join(" & ")+")").join("; ")+
       ". PM block times are not published, so this is listed here but not placed on the weekly pages."; }
+  else pel.style.display="none";
 }
 function drawNotes(i){
   const box=document.querySelector('.cnotes[data-i="'+i+'"]'); if(!box) return;
@@ -133,12 +169,30 @@ function drawNotes(i){
 }
 function live(){ if($("#outCard").style.display==="block") build(); }
 
+/* The glance is one column per rotation day, so it needs a date to decide which
+   semester's courses to show. Passing null silently meant Semester 1 forever —
+   a student whose spring courses are all S2 saw an empty grid in February. */
+/* Today as a *local* calendar date. iso(new Date()) is UTC, so it rolls over to
+   tomorrow during the evening in a western timezone — which would flip the
+   glance to Semester 2 a few hours early on the night of Jan 28. */
+function todayISO(){
+  const n=new Date();
+  return B.iso(new Date(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())));
+}
+function glanceDate(){
+  const t=todayISO();
+  if(t<D.firstMonday) return D.firstMonday;
+  if(t>D.lastDay)     return D.lastDay;
+  return t;
+}
+
 /* ---------- at a glance ---------- */
 function renderGlance(){
+  const gd=glanceDate(), sem=(gd>=D.sem2Start)?"S2":"S1";
   let h='<table class="grid"><thead><tr><th class="rowlab"></th>';
   for(let d=1;d<=6;d++) h+="<th>DAY "+d+"</th>";
   h+="</tr></thead><tbody>";
-  const R=[]; for(let d=1;d<=6;d++) R.push(B.resolveDay(d,null));
+  const R=[]; for(let d=1;d<=6;d++) R.push(B.resolveDay(d,gd));
   ROWS.forEach(([k,label])=>{
     h+='<tr><th class="rowlab">'+nl(label)+"</th>";
     for(let d=0;d<6;d++){
@@ -155,13 +209,20 @@ function renderGlance(){
     h+="</tr>";
   });
   $("#atGlance").innerHTML=h+"</tbody></table>";
+  const other=B.COURSES.filter(r=>r.meets.length && r.term!=="FY" && r.term!==sem);
+  let cap="Showing "+(sem==="S2"?"Semester 2":"Semester 1")+", the courses that run on "+
+          B.fmtLong(B.mkDate(gd))+".";
+  if(other.length) cap+=" "+other.map(r=>r.desc).join(", ")+
+    (other.length===1?" is":" are")+" in the other semester, so not in this grid — "+
+    (other.length===1?"it is":"they are")+" on the weekly pages.";
+  $("#glanceTerm").textContent=cap;
 }
 
 /* ---------- weekly pages ---------- */
 function weekMondays(mode){
   const first=B.mkDate(D.firstMonday), last=B.mkDate(D.lastMonday), out=[];
   for(let m=first;m<=last;m=B.addDays(m,7)) out.push(m);
-  const now=new Date(), today=B.iso(new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())));
+  const today=todayISO();
   const onOrAfter = out.filter(m=>B.iso(B.addDays(m,6))>=today);
   const current   = out.filter(m=>B.iso(m)<=today && today<=B.iso(B.addDays(m,6)));
   if(mode==="sem1")      return out.filter(m=>B.iso(m)<D.sem2Start);
@@ -292,6 +353,7 @@ window.__WEEKS__=weekMondays; window.__EVEROWS__=eveningRows; window.__BSNOTE__=
 
 /* ---------- wiring ---------- */
 function build(){
+  checkNoteTimes();
   B.indexCourses(); renderGlance();
   const n=renderWeeks();
   $("#outCard").style.display="block";
