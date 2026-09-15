@@ -1,0 +1,13 @@
+{
+  "name": "high-key-planner-tests",
+  "private": true,
+  "description": "Browser-side regression tests for site/index.html",
+  "scripts": {
+    "test": "node run.js",
+    "print-check": "node print-colour.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0",
+    "ws": "^8.18.0"
+  }
+}

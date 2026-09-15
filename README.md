@@ -129,4 +129,11 @@ browser tool's scheduling logic was diffed against a verified spreadsheet across
 school days with zero differences. The `.ics` exports match the spreadsheet across 487
 class entries.
 
-`workbooks/verify.py` re-runs the workbook half of that on demand.
+`workbooks/verify.py` re-runs the workbook half of that on demand, and
+`tests/` re-runs the browser half:
+
+```bash
+cd tests
+npm install && npm test      # drives the built page through jsdom
+npm run print-check          # prints a real PDF and checks the colours survive
+```

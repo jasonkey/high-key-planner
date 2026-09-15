@@ -8,6 +8,7 @@ students/*
 *.ics
 *.pdf
 workbooks/blocks.pkl
+tests/node_modules/
 __pycache__/
 *.pyc
 .DS_Store

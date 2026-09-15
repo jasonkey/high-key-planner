@@ -68,6 +68,19 @@ jobs:
           python verify.py | tee /tmp/verify.out
           grep -q 'TOTAL ERRORS: 0' /tmp/verify.out
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # verify.py covers the workbook side; this drives site/index.html itself,
+      # so the browser half cannot drift unnoticed.
+      - name: Browser regression tests
+        run: |
+          cd tests
+          npm install --no-fund --no-audit
+          npm test
+
   deploy:
     needs: check
     if: github.event_name != 'pull_request'

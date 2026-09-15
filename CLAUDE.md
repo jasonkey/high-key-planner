@@ -14,7 +14,8 @@ document each calendar fact came from and which facts are still unpublished. Rea
 
 ## Commands
 
-Python 3 + `openpyxl` (the only third-party dependency; workbook code only).
+Python 3 + `openpyxl` (the only runtime dependency; workbook code only). The browser
+tests under `tests/` add Node + `jsdom`, dev-only and confined to that directory.
 
 ```bash
 # Web tool — site/index.html is GENERATED, never hand-edit it
@@ -29,10 +30,23 @@ python build.py --blank                    # High_Key_Planner_TEMPLATE.xlsx
 python build.py ../students/example.py     # High_Key_Planner_Example.xlsx
 python calendars.py ../students/example.py --startend
 python verify.py                           # audit; requires BOTH builds above to exist first
+
+# Browser-side tests — drive the built site/index.html, so assemble.py first
+cd tests
+npm install && npm test                    # 51 assertions, no browser needed
+npm run print-check                        # needs Chrome + pdftoppm; not in CI
 ```
 
-There is no test suite, linter, or build step beyond `assemble.py`. `verify.py` is
-the regression check: it loads the two generated workbooks and diffs them against
+There is no linter, and no build step beyond `assemble.py`. Two regression checks
+guard the two halves of the project — run both after any change.
+
+`tests/run.js` covers the browser half: it loads the **built** `site/index.html`
+through jsdom and drives it the way a family would, so it catches things a syntax
+check cannot — a handler referencing markup that was deleted, a `ReferenceError`
+reachable only from one dropdown value, a stale `district_data.json`. Run
+`assemble.py` before it or you are testing the previous build.
+
+`verify.py` is the other half: it loads the two generated workbooks and diffs them against
 `workbooks/district_block_calendar.json` (209 events transcribed from the district's
 own published block calendar — an independent source, which is the only reason the
 check means anything). It prints `TOTAL ERRORS: 0` when clean. After touching
@@ -44,8 +58,13 @@ Two limits on that check, both worth knowing before you trust it:
   (`{"A": "SPANISH 2", ...}`), `late_days=(1,5)` and `lunch1_days=(1,)` are literals in
   its `audit()` call. Editing `example.py` breaks `verify.py` until those are updated
   too. The TEMPLATE workbook is only loaded and counted, not audited.
-- **It covers the Python side only.** Nothing automatically checks `src/web/*.js`
-  against `planner.py`; the browser implementation is verified by reading it.
+- **It covers the Python side only.** `tests/run.js` covers the browser side, but
+  nothing diffs the two implementations against each other; that agreement still
+  rests on both reading `district_data.json` and on changes being made twice.
+- **Print colour is not checked by `npm test`.** The fast suite asserts the
+  `print-color-adjust` rule exists; `npm run print-check` proves it works by
+  printing a real PDF through Chrome and measuring the colour left in it. That one
+  needs Chrome and `pdftoppm`, so it is a local check rather than a CI step.
 
 ## Architecture
 
