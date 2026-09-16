@@ -29,59 +29,67 @@ This is the constraint the whole layout is built around.
 If you add a feature that would trade any of this for convenience, say so out loud before
 building it.
 
-## Running the web tool
+## Use it
 
-`site/` is static and self-contained. Open `site/index.html` in a browser, or serve it:
+**https://jasonkey.github.io/high-key-planner/**
 
-```bash
-python -m http.server -d site 8000
-```
+Paste an Aspen schedule, check it, print the year. Nothing to install, and nothing
+leaves the browser.
 
-To publish it, set Settings → Pages → Source to **GitHub Actions**. The workflow in
-`.github/workflows/pages.yml` uploads `site/` on every push to `main`. Nothing needs
-building at deploy time — it checks that the committed page is up to date and that
-`verify.py` is clean, then serves the folder as-is.
-
-A branch deploy will not work here: when Pages deploys from a branch it can only serve
-the repository root or `/docs`, never an arbitrary folder like `/site`, and `/docs` in
-this repo holds the sourcing notes rather than the site.
-
-**Before you publish:** GitHub Pages on a free account requires a public repository, so
-everything committed becomes world-readable. `students/` is git-ignored except
-`example.py`, and `docs/district-sources.md` is written without identifying details —
-keep it that way.
-
-### Editing it
-
-`site/index.html` is generated — do not edit it by hand. Edit the files in `src/web/`
-and re-assemble:
+`site/index.html` is one self-contained file, so you can also save it and open it
+from disk with the network off. To serve a local copy:
 
 ```bash
-cd src
-python assemble.py          # src/web/* + district_data.json -> site/index.html
+python3 -m http.server -d site 8000
 ```
 
-If you change the school calendar, regenerate the data the page reads first:
-
-```bash
-cd src
-python gen_district_data.py # workbooks/planner.py -> src/district_data.json
-python assemble.py
-```
-
-## Building workbooks and calendars
+## Build a planner for a real student
 
 ```bash
 cd workbooks
-python build.py --blank                    # fill-in-yourself template
-python build.py ../students/example.py     # one student's full-year planner
-python calendars.py ../students/example.py --startend
-python verify.py                           # audit the output against district data
+python3 build.py --blank                    # fill-in-yourself template
+python3 build.py ../students/example.py     # a full-year .xlsx planner
+python3 calendars.py ../students/example.py --startend    # .ics exports
 ```
 
-To make a planner for a real student, copy `students/example.py`, replace the courses
-from their Aspen **My Info → Schedule → List** view, and run `build.py` on it. Git ignores
-the new file. `students/README.md` explains the `Schedule` column notation.
+Copy `students/example.py`, replace the courses from the student's Aspen
+**My Info → Schedule → List** view, and run `build.py` on that file. Git ignores it.
+`students/README.md` explains the `Schedule` column, which is the part that matters.
+
+## Work on it
+
+Python 3 and `openpyxl` build the planners. Node is needed only to run the tests.
+
+**`site/index.html` is generated — never edit it by hand.** Edit `src/web/*`, then:
+
+```bash
+cd src
+python3 gen_district_data.py   # only if you changed workbooks/planner.py
+python3 assemble.py            # src/web/* + district_data.json -> site/index.html
+```
+
+Then run both halves of the check — the workbook side and the browser side:
+
+```bash
+cd workbooks && python3 build.py --blank && python3 build.py ../students/example.py && python3 verify.py
+cd tests && npm install && npm test
+```
+
+`verify.py` ends with `TOTAL ERRORS: 0` and `npm test` with `0 failed`. CI runs both
+on every push and pull request, and refuses to deploy if either fails or if
+`site/index.html` is out of date with `planner.py`.
+
+## Deploy
+
+Settings → Pages → Source → **GitHub Actions**. `.github/workflows/pages.yml`
+publishes `site/` on every push to `main`; nothing is built at deploy time. It has to
+be an Actions deploy, because a branch deploy can only serve the repository root or
+`/docs`.
+
+**Before publishing:** Pages on a free account requires a public repository, so
+everything committed becomes world-readable. `students/` is git-ignored except
+`example.py`, and `docs/district-sources.md` is written without identifying details.
+Keep it that way.
 
 ## Layout
 
@@ -129,11 +137,7 @@ browser tool's scheduling logic was diffed against a verified spreadsheet across
 school days with zero differences. The `.ics` exports match the spreadsheet across 487
 class entries.
 
-`workbooks/verify.py` re-runs the workbook half of that on demand, and
-`tests/` re-runs the browser half:
-
-```bash
-cd tests
-npm install && npm test      # drives the built page through jsdom
-npm run print-check          # prints a real PDF and checks the colours survive
-```
+`verify.py` re-runs the workbook half of that on demand and `tests/` the browser
+half — see **Work on it** above. `cd tests && npm run print-check` additionally prints
+a real PDF through Chrome and measures that the colours survive; it needs Chrome and
+`pdftoppm`, so it is a local check rather than a CI step.

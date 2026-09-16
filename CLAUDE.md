@@ -20,16 +20,16 @@ tests under `tests/` add Node + `jsdom`, dev-only and confined to that directory
 ```bash
 # Web tool — site/index.html is GENERATED, never hand-edit it
 cd src
-python gen_district_data.py   # workbooks/planner.py -> src/district_data.json
-python assemble.py            # src/web/* + district_data.json -> site/index.html
-python -m http.server -d ../site 8000      # serve it (opening the file directly also works)
+python3 gen_district_data.py   # workbooks/planner.py -> src/district_data.json
+python3 assemble.py            # src/web/* + district_data.json -> site/index.html
+python3 -m http.server -d ../site 8000      # serve it (opening the file directly also works)
 
 # Workbooks and calendars (all output lands in workbooks/, git-ignored)
 cd workbooks
-python build.py --blank                    # High_Key_Planner_TEMPLATE.xlsx
-python build.py ../students/example.py     # High_Key_Planner_Example.xlsx
-python calendars.py ../students/example.py --startend
-python verify.py                           # audit; requires BOTH builds above to exist first
+python3 build.py --blank                    # High_Key_Planner_TEMPLATE.xlsx
+python3 build.py ../students/example.py     # High_Key_Planner_Example.xlsx
+python3 calendars.py ../students/example.py --startend
+python3 verify.py                           # audit; requires BOTH builds above to exist first
 
 # Browser-side tests — drive the built site/index.html, so assemble.py first
 cd tests
