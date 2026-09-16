@@ -206,10 +206,10 @@ async function testRanges() {
   const txt = d.getElementById("printArea").textContent;
   ok("the Jun 28 snow make-up week has a page", txt.includes("June 28, 2027"));
   ok("it is marked as a make-up day", txt.includes("SNOW MAKE-UP"));
-  ok("the whole year plus the calendar page is 43", /43 pages/.test($("#outInfo").textContent),
+  ok("the whole year is 42 pages", /42 pages/.test($("#outInfo").textContent),
     $("#outInfo").textContent);
-  $("#yearcal").checked = false; $("#btnBuild").click(); await pause(600);
-  ok("without the calendar it is 42", /42 pages/.test($("#outInfo").textContent),
+  $("#yearcal").checked = true; $("#btnBuild").click(); await pause(600);
+  ok("adding the calendar makes it 43", /43 pages/.test($("#outInfo").textContent),
     $("#outInfo").textContent);
 }
 
@@ -218,9 +218,11 @@ async function testYearCalendar() {
   const { d, $ } = await load();
   $("#paste").value = DEMO_ROW; $("#btnParse").click(); await pause();
   $("#range").value = "thisweek"; $("#btnBuild").click(); await pause(500);
+  ok("it is off unless asked for", !d.querySelector("#printArea .ycgrid"));
 
+  $("#yearcal").checked = true; $("#btnBuild").click(); await pause(500);
   const page = d.querySelector("#printArea .wk");
-  ok("the calendar is the first printed page", !!page && !!page.querySelector(".ycgrid"));
+  ok("ticking the box puts it first", !!page && !!page.querySelector(".ycgrid"));
   const months = d.querySelectorAll("#printArea .ycmonth");
   ok("ten months, September to June", months.length === 10, months.length + " months");
   ok("weekday columns only", [...d.querySelectorAll("#printArea .ycmonth")][0]
@@ -266,7 +268,7 @@ async function testYearCalendar() {
     /Not an official school publication/.test(d.querySelector("#printArea .ycfoot").textContent));
 
   $("#yearcal").checked = false; $("#btnBuild").click(); await pause(400);
-  ok("unchecking the box removes it", !d.querySelector("#printArea .ycgrid"));
+  ok("unticking it removes it again", !d.querySelector("#printArea .ycgrid"));
 }
 
 async function testRangesAfterYearEnd() {

@@ -37,10 +37,10 @@ building it.
 python -m http.server -d site 8000
 ```
 
-The printed pack opens with a one-page **year at a glance** — ten Mon–Fri month
-grids, every date stamped with its rotation day, with no-school, early-release,
-exam, MCAS and snow make-up days shaded. Turn it off in Planner options if you
-only want the weekly pages.
+Tick **One-page year calendar** in Planner options for a **year at a glance** —
+ten Mon–Fri month grids, every date stamped with its rotation day, with no-school,
+early-release, exam, MCAS and snow make-up days shaded. It prints as the first
+page, ahead of the weekly ones.
 
 To publish it, set Settings → Pages → Source to **GitHub Actions**. The workflow in
 `.github/workflows/pages.yml` uploads `site/` on every push to `main`. Nothing needs
