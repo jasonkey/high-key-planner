@@ -284,7 +284,9 @@ function monthWeeks(y, mo){
 }
 
 /* One page answering the question the weekly pages cannot: what rotation day is
-   any given date? Reads the same district data as everything else. */
+   any given date? Reads the same district data as everything else.
+
+   Currently not reachable from the UI — see the note by window.__YEARCAL__. */
 function yearCalendarHtml(title){
   const first=B.mkDate(D.firstMonday), last=B.mkDate(D.lastMonday);
   let h='<div class="wk"><div class="yctitle">'+esc(title)+'   ·   The year at a glance</div>';
@@ -422,7 +424,6 @@ function renderWeeks(){
     }
     out.push(h+"</table></div>");
   });
-  if($("#yearcal").checked) out.unshift(yearCalendarHtml(title));
   document.getElementById("printArea").innerHTML=out.join("");
   return out.length;
 }
@@ -438,6 +439,11 @@ function mcasList(letters, ds){
 }
 
 window.__WEEKS__=weekMondays; window.__EVEROWS__=eveningRows; window.__BSNOTE__=()=>noteOf("bs");
+/* The year-at-a-glance page is built and styled but has no control on the page
+   for now. Published so the tests keep exercising it — dormant code that nobody
+   runs is dormant code that quietly stops working. Put the checkbox back in
+   body.html and restore the unshift in renderWeeks to re-enable it. */
+window.__YEARCAL__=yearCalendarHtml;
 
 /* ---------- wiring ---------- */
 function build(){
@@ -465,7 +471,7 @@ $("#btnClear").onclick=()=>{ $("#paste").value=""; $("#parseMsg").className="msg
 $("#btnBuild").onclick=build;
 $("#btnPrint").onclick=()=>{ renderWeeks(); window.print(); };
 $("#btnXlsx").onclick=()=>window.__XLSX__ && window.__XLSX__();
-["range","evening","who","yearcal","bsTime","bsWhat","evTime","evWhat",
+["range","evening","who","bsTime","bsWhat","evTime","evWhat",
  "bsd1","bsd2","bsd3","bsd4","bsd5","evd1","evd2","evd3","evd4","evd5"].forEach(id=>{
   const el=$("#"+id); if(!el) return;
   const go=()=>{ if($("#outCard").style.display==="block") build(); };

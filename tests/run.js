@@ -208,67 +208,58 @@ async function testRanges() {
   ok("it is marked as a make-up day", txt.includes("SNOW MAKE-UP"));
   ok("the whole year is 42 pages", /42 pages/.test($("#outInfo").textContent),
     $("#outInfo").textContent);
-  $("#yearcal").checked = true; $("#btnBuild").click(); await pause(600);
-  ok("adding the calendar makes it 43", /43 pages/.test($("#outInfo").textContent),
-    $("#outInfo").textContent);
 }
 
 async function testYearCalendar() {
-  suite("year at a glance");
-  const { d, $ } = await load();
+  /* The year-at-a-glance page has no checkbox at the moment — ui.js publishes
+     __YEARCAL__ so it stays exercised while it is off the page. If it is ever
+     restored to the UI, add a test that the control shows it. */
+  suite("year at a glance (built, but not offered in the UI)");
+  const { d, $, w } = await load();
+  ok("no control for it on the page", !d.querySelector("#yearcal"));
   $("#paste").value = DEMO_ROW; $("#btnParse").click(); await pause();
   $("#range").value = "thisweek"; $("#btnBuild").click(); await pause(500);
-  ok("it is off unless asked for", !d.querySelector("#printArea .ycgrid"));
+  ok("nothing prepends it to the print output", !d.querySelector("#printArea .ycgrid"));
 
-  $("#yearcal").checked = true; $("#btnBuild").click(); await pause(500);
-  const page = d.querySelector("#printArea .wk");
-  ok("ticking the box puts it first", !!page && !!page.querySelector(".ycgrid"));
-  const months = d.querySelectorAll("#printArea .ycmonth");
+  ok("the renderer is still reachable", typeof w.__YEARCAL__ === "function");
+  if (typeof w.__YEARCAL__ !== "function") return;
+
+  const holder = d.createElement("div");
+  holder.innerHTML = w.__YEARCAL__("HIGH KEY  ·  BHS WEEKLY PLANNER");
+  const months = holder.querySelectorAll(".ycmonth");
   ok("ten months, September to June", months.length === 10, months.length + " months");
-  ok("weekday columns only", [...d.querySelectorAll("#printArea .ycmonth")][0]
-    .querySelectorAll("thead th").length === 5);
+  ok("weekday columns only", months[0].querySelectorAll("thead th").length === 5);
 
-  /* Derived from the district data rather than hard-coded, so these stay true
-     when the calendar year changes. Scoped to the grid: the legend has a .ycd
-     swatch of its own. */
-  const DD = d.defaultView.__DISTRICT__;
+  const DD = w.__DISTRICT__;
   const schoolDays = Object.keys(DD.dayNum).length;
-  const stamps = d.querySelectorAll("#printArea .ycgrid .ycd");
-  ok("every school day carries a rotation day", stamps.length === schoolDays,
-    stamps.length + " stamped of " + schoolDays);
+  ok("every school day carries a rotation day",
+    holder.querySelectorAll(".ycgrid .ycd").length === schoolDays,
+    holder.querySelectorAll(".ycgrid .ycd").length + " stamped of " + schoolDays);
 
-  /* Sep 14 2026 is a Day 5 — the same date the weekly pages open on. */
   const sept = [...months].find(m => m.textContent.startsWith("September"));
   const cell = [...sept.querySelectorAll("td")].find(td => {
     const n = td.querySelector(".ycn"); return n && n.textContent === "14";
   });
   ok("Sep 14 2026 is stamped Day 5", cell && cell.querySelector(".ycd")
-    && cell.querySelector(".ycd").textContent === "5",
-    cell && cell.querySelector(".ycd") && cell.querySelector(".ycd").textContent);
+    && cell.querySelector(".ycd").textContent === "5");
 
-  /* Weekend closures have no cell to shade — the grid is Mon-Fri. */
   const weekdayClosed = Object.keys(DD.closed)
     .filter(ds => { const wd = new Date(ds + "T00:00:00Z").getUTCDay(); return wd >= 1 && wd <= 5; }).length;
   ok("every weekday closure is shaded",
-    d.querySelectorAll("#printArea td.ycoff").length === weekdayClosed,
-    d.querySelectorAll("#printArea td.ycoff").length + " shaded of " + weekdayClosed +
-    " weekday closures (" + Object.keys(DD.closed).length + " total)");
-  /* The class being applied is not the same as it painting. A bare `.ycoff`
-     (0,1,0) loses to `.ycmonth td` (0,1,1), which silently blanked every shaded
-     day once. getComputedStyle cannot settle this — jsdom applies the last
-     matching rule rather than resolving specificity, and reports transparent
-     either way — so assert the selectors are written at cell specificity. */
+    holder.querySelectorAll("td.ycoff").length === weekdayClosed,
+    holder.querySelectorAll("td.ycoff").length + " of " + weekdayClosed);
+
+  /* A bare .ycoff (0,1,0) loses to .ycmonth td (0,1,1), which silently blanked
+     every shaded day once. getComputedStyle cannot settle it — jsdom takes the
+     last matching rule rather than resolving specificity. */
   const sheet = [...d.querySelectorAll("style")].map(x => x.textContent).join("\n");
   const shades = ["ycoff", "ycearly", "ycexam", "ycmcas", "ycsnow", "yclast"];
   const weak = shades.filter(c => !new RegExp("\\.ycmonth td\\." + c + "\\b").test(sheet));
-  ok("each shade outranks the cell's white default", weak.length === 0,
-    weak.length ? "too weak: ." + weak.join(", .") : shades.length + " checked");
+  ok("its styles are still present and outrank the cell default", weak.length === 0,
+    weak.length ? "missing or too weak: ." + weak.join(", .") : shades.length + " checked");
 
   ok("it says it is not an official publication",
-    /Not an official school publication/.test(d.querySelector("#printArea .ycfoot").textContent));
-
-  $("#yearcal").checked = false; $("#btnBuild").click(); await pause(400);
-  ok("unticking it removes it again", !d.querySelector("#printArea .ycgrid"));
+    /Not an official school publication/.test(holder.querySelector(".ycfoot").textContent));
 }
 
 async function testRangesAfterYearEnd() {

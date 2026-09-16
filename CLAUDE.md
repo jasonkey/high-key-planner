@@ -110,6 +110,15 @@ periods 1, 2, 4 and 5 only — the lunch-split times (`10:49 - 11:19`, `10:54-12
 `1:55 - 2:15` early) are typed out in `planner.resolve_day` and again in
 `app.js resolveDay`. Changing one of those means grepping for the literal in both.
 
+### Built but not offered
+
+`yearCalendarHtml()` in `app`/`ui.js` renders the one-page year-at-a-glance sheet —
+ten Mon–Fri month grids stamped with rotation days — and its styles are in
+`head.html`, but there is no control for it on the page. `ui.js` publishes it as
+`window.__YEARCAL__` purely so `tests/run.js` keeps exercising it; dormant code
+that nobody runs stops working quietly. To bring it back: restore the checkbox in
+`body.html` and the `out.unshift(...)` in `renderWeeks`.
+
 ### Generated files — do not edit
 
 - `site/index.html` — output of `src/assemble.py`. Edit `src/web/{head,body}.html`,
