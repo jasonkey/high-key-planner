@@ -3,7 +3,7 @@
 Source for the web tool. `assemble.py` concatenates these into `site/index.html`.
 
 ```bash
-python assemble.py           # rebuild site/index.html
+python3 assemble.py          # rebuild site/index.html
 ```
 
 | file | what it is |

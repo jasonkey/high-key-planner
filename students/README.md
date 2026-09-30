@@ -8,7 +8,7 @@ To add someone:
 ```bash
 cp example.py sb.py          # edit the courses
 cd ../workbooks
-python build.py ../students/sb.py
+python3 build.py ../students/sb.py
 ```
 
 Read the schedule off Aspen's **My Info → Schedule → List** view. The `Schedule`
