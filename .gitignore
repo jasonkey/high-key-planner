@@ -1,14 +1,44 @@
 # Real student schedules never belong in this repository.
+# Everything in students/ is a real person's schedule except these two.
 students/*
 !students/example.py
 !students/README.md
 
-# Generated output
+# Build products. Regenerate with build.py, calendars.py and assemble.py —
+# site/index.html and src/district_data.json are the exceptions: they are
+# generated but committed, because Pages serves them as they are found.
 *.xlsx
 *.ics
 *.pdf
 workbooks/blocks.pkl
-tests/node_modules/
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node — used only by tests/
+node_modules/
+npm-debug.log*
+.npm/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/settings.local.json
+
+# OS
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
