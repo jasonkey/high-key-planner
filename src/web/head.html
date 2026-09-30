@@ -102,6 +102,42 @@ code.k{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px}
   .wk{page-break-after:always;break-after:page;page-break-inside:avoid}
   .wk:last-child{page-break-after:auto;break-after:auto}
 }
+/* ---- right now: today, tomorrow and the current week ---- */
+.step.nowstep{padding-left:0}
+.nowpair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.nowpair{grid-template-columns:1fr}}
+.nowday{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff}
+.nowlab{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.nowdate{font-size:15px;font-weight:600;color:var(--ink);margin-top:1px}
+.nowbadge{display:inline-block;margin-top:8px;background:var(--dark);color:#fff;font-weight:700;
+  font-size:13px;letter-spacing:.04em;border-radius:5px;padding:2px 9px}
+.nowtimes{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:9px;font-size:14px}
+.nowtimes b{font-size:16px}
+.nowtimes .nlate{color:var(--lateink)}
+.nowtimes .nearly{color:var(--earlyink)}
+.nowoff{margin-top:9px;font-size:14px;color:var(--ink);background:var(--closed);
+  border-radius:7px;padding:8px 10px}
+.nownext{margin-top:8px;font-size:13.5px;color:var(--ink)}
+.nowper{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+.nowper td{border-top:1px solid var(--line);padding:3px 0;vertical-align:top}
+.nowper .npn{width:34px;color:var(--muted);font-size:11px;padding-top:4px}
+.nowper .npc{font-weight:600}
+.nowper .npc.npfree{font-weight:400;color:var(--muted);font-style:italic}
+.nowper .npm{color:var(--muted);text-align:right;font-size:11.5px;padding-left:8px}
+.nowweekwrap{margin-top:16px}
+.nowweeklab{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:6px}
+table.nowweek{width:100%;border-collapse:collapse;font-size:13px;min-width:520px}
+table.nowweek th,table.nowweek td{border:1px solid var(--line);padding:5px 6px;text-align:center}
+table.nowweek thead th{background:var(--accentbg);font-size:11.5px}
+table.nowweek .nwlab{background:#fff;text-align:left;color:var(--muted);font-size:11.5px;
+  font-weight:600;width:74px}
+table.nowweek .nwtoday{background:var(--event)}
+table.nowweek .nwday{font-weight:700;font-size:12px}
+table.nowweek .nwoff{color:var(--muted);font-size:11.5px}
+table.nowweek .nwlate{color:var(--lateink);font-weight:700;background:var(--late)}
+table.nowweek .nwearly{color:var(--earlyink);font-weight:700;background:var(--early)}
+
 /* ---- year at a glance: ten Mon-Fri month grids on one landscape page ----
    Kept while the option is off the page; see window.__YEARCAL__ in ui.js. */
 .yctitle{background:var(--dark);color:#fff;font-size:12.5px;font-weight:700;

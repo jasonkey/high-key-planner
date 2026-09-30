@@ -36,6 +36,11 @@ building it.
 Paste an Aspen schedule, check it, print the year. Nothing to install, and nothing
 leaves the browser.
 
+**Right now** answers the daily question without printing anything: today and
+tomorrow in full — rotation day, arrival, dismissal and every period — plus this
+week's five days. On a weekend or a holiday it says so, and names the next school
+day and its start time.
+
 `site/index.html` is one self-contained file, so you can also save it and open it
 from disk with the network off. To serve a local copy:
 

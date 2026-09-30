@@ -95,6 +95,7 @@ function doParse(){
   msg($("#parseMsg"),"ok","Read "+named+" scheduled course"+(named===1?"":"s")+
       (out.rows.length>named?(" plus "+(out.rows.length-named)+" with no class period"):"")+". Check them below.");
   renderEdit(); $("#editCard").style.display="block";
+  renderNow();
   $("#editCard").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function scopeOptions(sel){
@@ -193,6 +194,128 @@ function glanceDate(){
   if(t<D.firstMonday) return D.firstMonday;
   if(t>D.lastDay)     return D.lastDay;
   return t;
+}
+
+/* ---------- right now ----------
+   The daily question this whole project exists for — what time does the student
+   leave, and when are they home — answered without printing anything. Screen
+   only: it is wrong the moment it is on paper. */
+
+/* The next date that is an ordinary rotation day, or null once the year is out.
+   Exams, MCAS and special schedules are school days but carry no published
+   times, so they are not "next school day" answers. */
+function nextSchoolDay(afterISO){
+  let d=B.addDays(B.mkDate(afterISO),1);
+  for(let i=0;i<400;i++){
+    const ds=B.iso(d);
+    if(ds>D.lastDay) return null;
+    if(B.dayInfo(ds).type==="day") return ds;
+    d=B.addDays(d,1);
+  }
+  return null;
+}
+
+function nowPeriods(g){
+  let h='<table class="nowper">';
+  [["p1","1st"],["p2","2nd"],["p3a","3rd"],["p3b","&nbsp;"],["p4","4th"],["p5","5th"]].forEach(pair=>{
+    const c=g.cells[pair[0]]; if(!c) return;
+    h+='<tr><td class="npn">'+pair[1]+'</td><td class="npc'+(c.kind==="free"?" npfree":"")+'">'+
+       esc(c.name)+'</td><td class="npm">'+esc(String(c.meta||"").split("\n").join(" · "))+"</td></tr>";
+  });
+  return h+"</table>";
+}
+
+function nowDay(label, ds){
+  const dt=B.mkDate(ds), i=B.dayInfo(ds);
+  let h='<div class="nowlab">'+esc(label)+'</div><div class="nowdate">'+
+        B.DOW[dt.getUTCDay()]+", "+esc(B.fmtLong(dt))+"</div>";
+
+  if(i.type==="day"){
+    const g=B.resolveDay(i.dn, ds);
+    h+='<div class="nowbadge">DAY '+i.dn+"</div>";
+    h+='<div class="nowtimes"><span'+(g.arrival[1]?' class="nlate"':"")+'>Arrive <b>'+esc(g.arrival[0])+
+       "</b>"+(g.arrival[1]?" · LATE START":"")+'</span><span'+(g.dismissal[1]?' class="nearly"':"")+
+       '>Home <b>'+esc(g.dismissal[0]).replace(/ \*\* EARLY \*\*/,"")+"</b>"+
+       (g.dismissal[1]?" · EARLY":"")+"</span></div>";
+    return h+nowPeriods(g);
+  }
+
+  /* Not an ordinary school day. Say which kind, never invent a time, and point
+     at the next day that does have one. */
+  let why;
+  if(ds<D.firstMonday)        why="The 2026/27 school year has not started yet.";
+  else if(ds>D.lastDay)       why="The 2026/27 school year is over.";
+  else if(i.type==="closed")  why=i.banner+(i.why?" — "+i.why:"");
+  else if(i.type==="snow")    why="Reserved snow make-up day — a school day only if snow days were used.";
+  else if(i.type==="exam")    why=i.banner+" — the exam schedule is not published. Check with the school.";
+  else if(i.type==="mcas")    why="MCAS testing — the day's times are not published.";
+  else if(i.type==="special") why=i.banner+" — dismissal "+(i.dismissal||"not published")+".";
+  else if(i.type==="last")    why="Last day of school — the schedule is not published.";
+  else                        why="No school.";
+  h+='<div class="nowoff">'+esc(why)+"</div>";
+
+  const nxt=nextSchoolDay(ds);
+  if(nxt){
+    const nd=B.mkDate(nxt), ni=B.dayInfo(nxt), ng=B.resolveDay(ni.dn, nxt);
+    h+='<div class="nownext">Next school day: <b>'+B.DOW[nd.getUTCDay()]+", "+esc(B.fmtLong(nd))+
+       "</b> — Day "+ni.dn+", arrive "+esc(ng.arrival[0])+
+       (ng.arrival[1]?" (late start)":"")+".</div>";
+  } else if(ds<=D.lastDay){
+    h+='<div class="nownext">No ordinary school days left this year.</div>';
+  }
+  return h;
+}
+
+/* The Mon-Fri week containing today; on a weekend, the week ahead. */
+function nowWeekStart(ds){
+  const d=B.mkDate(ds), wd=d.getUTCDay();
+  if(wd===0) return B.addDays(d,1);
+  if(wd===6) return B.addDays(d,2);
+  return B.addDays(d,1-wd);
+}
+
+function renderNow(){
+  const today=todayISO();
+  $("#nowToday").innerHTML    = nowDay("Today", today);
+  $("#nowTomorrow").innerHTML = nowDay("Tomorrow", B.iso(B.addDays(B.mkDate(today),1)));
+
+  const mon=nowWeekStart(today), wd=B.mkDate(today).getUTCDay();
+  $("#nowWeekLab").textContent = (wd===0||wd===6 ? "Next week" : "This week") +
+    " · " + B.fmtLong(mon) + " to " + B.fmtLong(B.addDays(mon,4));
+
+  const days=[0,1,2,3,4].map(i=>B.addDays(mon,i));
+  /* Out of term, five dashes say nothing worth the space. */
+  if(!days.some(d=>B.dayInfo(B.iso(d)).type==="day")){
+    $("#nowWeekWrap").style.display="none";
+    $("#nowCard").style.display="block";
+    return;
+  }
+  $("#nowWeekWrap").style.display="";
+  let head='<tr><th class="nwlab"></th>', rot='<tr><th class="nwlab">Rotation</th>',
+      arr='<tr><th class="nwlab">Arrive</th>', dis='<tr><th class="nwlab">Home</th>';
+  days.forEach(d=>{
+    const ds=B.iso(d), i=B.dayInfo(ds), cls=(ds===today?' class="nwtoday"':"");
+    head+="<th"+cls+">"+B.DOW[d.getUTCDay()].slice(0,3)+" "+esc(B.fmtShort(d))+"</th>";
+    if(i.type==="day"){
+      const g=B.resolveDay(i.dn, ds);
+      rot+="<td"+cls+'><span class="nwday">DAY '+i.dn+"</span></td>";
+      arr+="<td"+(g.arrival[1]?' class="nwlate"':cls)+">"+esc(g.arrival[0])+"</td>";
+      dis+="<td"+(g.dismissal[1]?' class="nwearly"':cls)+">"+
+           esc(g.dismissal[0]).replace(" ** EARLY **","")+"</td>";
+    } else {
+      const lab = i.type==="closed" ? "no school"
+                : i.type==="snow"   ? "make-up"
+                : i.type==="exam"   ? "exams"
+                : i.type==="mcas"   ? "MCAS"
+                : i.type==="special"? "early release"
+                : i.type==="last"   ? "last day" : "—";
+      rot+='<td class="nwoff">'+esc(lab)+"</td>";
+      arr+='<td class="nwoff">—</td>'; dis+='<td class="nwoff">—</td>';
+    }
+  });
+  $("#nowWeek").innerHTML="<thead>"+head+"</tr></thead><tbody>"+
+    rot+"</tr>"+arr+"</tr>"+dis+"</tr></tbody>";
+  $("#nowCard").style.display="block";
 }
 
 /* ---------- at a glance ---------- */
@@ -448,7 +571,7 @@ window.__YEARCAL__=yearCalendarHtml;
 /* ---------- wiring ---------- */
 function build(){
   checkNoteTimes();
-  B.indexCourses(); renderGlance();
+  B.indexCourses(); renderNow(); renderGlance();
   const n=renderWeeks();
   $("#outCard").style.display="block";
   const label=$("#range").selectedOptions[0].textContent;
@@ -467,7 +590,8 @@ $("#btnParse").onclick=doParse;
 $("#btnDemo").onclick=()=>{ $("#paste").value=DEMO; doParse();
   msg($("#parseMsg"),"warn","Loaded a made-up schedule so you can see how it works. Clear it before building a real one."); };
 $("#btnClear").onclick=()=>{ $("#paste").value=""; $("#parseMsg").className="msg";
-  $("#editCard").style.display="none"; $("#outCard").style.display="none"; };
+  $("#editCard").style.display="none"; $("#nowCard").style.display="none";
+  $("#outCard").style.display="none"; };
 $("#btnBuild").onclick=build;
 $("#btnPrint").onclick=()=>{ renderWeeks(); window.print(); };
 $("#btnXlsx").onclick=()=>window.__XLSX__ && window.__XLSX__();

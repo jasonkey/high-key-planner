@@ -17,6 +17,16 @@ const path = require("path");
 
 const PAGE = path.join(__dirname, "..", "site", "index.html");
 const DEMO_ROW = 'VA1000-01\tStudio Art\tFY\tC Block\t2(2,5) 3(3,6)\tChen, L.';
+const DEMO_FULL = [
+  "WL1000-01\tSpanish 2\tFY\tA(2,4)\t1(3) 2(6)\tAdams, R.",
+  "EN1000-01\tEnglish 9\tFY\tB Block\t1(2,4,6) 2(3)\tBrooks, T.",
+  "VA1000-01\tStudio Art\tFY\tC Block\t2(2,5) 3(3,6)\tChen, L.",
+  "SC1000-01\tBiology\tFY\tD Block\t2(1,4) 3(2,5)\tDiaz, M.",
+  "WE1000-01\tHealth & Wellness\tS1\tE Block\t3(1) 4(2,4,6)\tEllis, J.",
+  "MA1000-01\tAlgebra 1\tFY\tF Block\t3(4) 4(1) 5(2,5)\tFord, K.",
+  "SO1000-01\tUS History\tFY\tG Block\t4(3,5) 5(1,4)\tGray, S.",
+  "HR1000-01\tAdvisory\tFY\tT Block\t5(3,6)\tHall, P.",
+].join("\n");
 
 let passed = 0;
 const failures = [];
@@ -296,6 +306,79 @@ async function testDebounce() {
   ok("one rebuild lands after the pause", area.innerHTML.length > 0);
 }
 
+async function testRightNow() {
+  suite("right now — today, tomorrow and this week");
+
+  /* Every case pins the clock, because the whole card is a function of the date. */
+  const at = async ms => {
+    const ctx = await load({ fakeNow: ms });
+    ctx.$("#paste").value = DEMO_FULL; ctx.$("#btnParse").click(); await pause(250);
+    return ctx;
+  };
+  const text = el => el.textContent.replace(/\s+/g, " ").trim();
+
+  // Wed 30 Sep 2026 is a Day 4; the next day is a Day 5 with a 9:37 late start.
+  {
+    const { d, $ } = await at(Date.UTC(2026, 8, 30, 12));
+    ok("the card appears once a schedule is read", $("#nowCard").style.display === "block");
+    const today = text(d.querySelector("#nowToday"));
+    ok("today names the date and rotation day", /Wednesday, September 30, 2026/.test(today) && /DAY 4/.test(today));
+    ok("today gives arrival and dismissal", /Arrive 8:20 AM/.test(today) && /Home 3:05 PM/.test(today));
+    ok("today lists its periods", d.querySelectorAll("#nowToday .nowper tr").length === 6,
+      d.querySelectorAll("#nowToday .nowper tr").length + " rows");
+    const tom = text(d.querySelector("#nowTomorrow"));
+    ok("tomorrow is the next day, with its late start flagged",
+      /Thursday, October 1, 2026/.test(tom) && /DAY 5/.test(tom) && /LATE START/.test(tom));
+    ok("the week strip covers Mon to Fri", d.querySelectorAll("#nowWeek thead th").length === 6,
+      "1 label + " + (d.querySelectorAll("#nowWeek thead th").length - 1) + " days");
+    ok("today's column is marked", d.querySelectorAll("#nowWeek .nwtoday").length > 0);
+    ok("the week names its range", /September 28, 2026 to October 2, 2026/.test($("#nowWeekLab").textContent));
+  }
+
+  // Saturday: no school, and the useful answer is when school next starts.
+  {
+    const { d, $ } = await at(Date.UTC(2026, 9, 3, 12));
+    const today = text(d.querySelector("#nowToday"));
+    ok("a Saturday says there is no school", /No school/.test(today));
+    ok("and names the next school day with its time",
+      /Next school day: Monday, October 5, 2026 — Day 1, arrive 9:37 AM/.test(today), today.slice(0, 110));
+    ok("on a weekend the strip shows the week ahead",
+      /^Next week/.test($("#nowWeekLab").textContent), $("#nowWeekLab").textContent);
+  }
+
+  // A holiday names itself rather than just going blank.
+  {
+    const { d } = await at(Date.UTC(2026, 9, 12, 12));
+    const today = text(d.querySelector("#nowToday"));
+    ok("a closure names itself", /SCHOOL CLOSED/.test(today) && /Indigenous Peoples' Day/.test(today));
+    ok("and still points at the next school day", /Next school day: Tuesday, October 13, 2026/.test(today));
+  }
+
+  // Exam days are school days with no published times — never invent one.
+  {
+    const { d } = await at(Date.UTC(2027, 0, 25, 12));
+    const tom = text(d.querySelector("#nowTomorrow"));
+    ok("an exam day says the schedule is not published",
+      /MIDTERM EXAMS/.test(tom) && /not published/.test(tom));
+    ok("and gives no arrival time for it", !/Arrive \d/.test(tom));
+  }
+
+  // Day 6 dismisses early — the card has to say so.
+  {
+    const { d } = await at(Date.UTC(2026, 9, 13, 12));
+    const today = text(d.querySelector("#nowToday"));
+    ok("a Day 6 flags the early dismissal", /DAY 6/.test(today) && /EARLY/.test(today), today.slice(0, 80));
+  }
+
+  // Out of term: say so, and drop the empty week strip.
+  {
+    const { d, $ } = await at(Date.UTC(2027, 6, 15, 12));
+    ok("after the year it says the year is over",
+      /school year is over/.test(text(d.querySelector("#nowToday"))));
+    ok("and the empty week strip is hidden", $("#nowWeekWrap").style.display === "none");
+  }
+}
+
 /* jsdom does not evaluate @media print, so this guards the rule itself. Without
    it the browser drops every background colour unless the reader happens to tick
    "Background graphics", and the printed week comes out as grey boxes.
@@ -316,7 +399,7 @@ async function testPrintColour() {
 (async () => {
   const all = [testLoads, testEscaping, testTermWarning, testNotesClear, testTimeParsing,
                testRecurringNoteDays, testGlance, testRanges, testRangesAfterYearEnd,
-               testDebounce, testYearCalendar, testPrintColour];
+               testDebounce, testYearCalendar, testRightNow, testPrintColour];
   for (const t of all) {
     try { await t(); }
     catch (e) { failures.push(t.name + " threw"); console.log("  FAIL  " + t.name + " threw — " + e.message); }

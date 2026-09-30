@@ -110,6 +110,14 @@ periods 1, 2, 4 and 5 only — the lunch-split times (`10:49 - 11:19`, `10:54-12
 `1:55 - 2:15` early) are typed out in `planner.resolve_day` and again in
 `app.js resolveDay`. Changing one of those means grepping for the literal in both.
 
+`renderNow()` in `ui.js` draws the **Right now** card: today and tomorrow in full,
+then the Mon–Fri week around them. It is screen-only (`.noprint`) — it is wrong the
+moment it is on paper. Anything that is not an ordinary rotation day (weekend,
+closure, exam, MCAS, special schedule, snow make-up, out of term) says which it is
+and never invents a time, matching how the rest of the tool treats unpublished data.
+`nextSchoolDay()` skips exam and MCAS days deliberately: they are school days with no
+published start time, so they are no answer to "when do I next go in?".
+
 ### Built but not offered
 
 `yearCalendarHtml()` in `app`/`ui.js` renders the one-page year-at-a-glance sheet —
