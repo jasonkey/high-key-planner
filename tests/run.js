@@ -190,6 +190,38 @@ async function testRecurringNoteDays() {
     ![...d.querySelectorAll("#printArea tr")].some(tr => tr.textContent.includes("DINNER")));
 }
 
+async function testGlanceOrder() {
+  suite("at a glance — ordered from this week");
+
+  /* Wed 30 Sep 2026: the week runs Mon=Day 2 through Fri=Day 6, so Day 1 is the
+     one rotation day that does not occur. It used to lead the table. */
+  {
+    const { d, $ } = await load({ fakeNow: Date.UTC(2026, 8, 30, 12) });
+    $("#paste").value = DEMO_FULL; $("#btnParse").click(); await pause();
+    $("#btnBuild").click(); await pause(500);
+    const heads = [...d.querySelectorAll("#atGlance thead th")].slice(1);
+    const days = heads.map(h => (h.textContent.match(/DAY (\d)/) || [])[1]);
+    ok("columns start at this week's first rotation day",
+      days.join("") === "234561", "DAY " + days.join(", "));
+    ok("each column names the weekday it falls on this week",
+      heads[0].textContent.includes("Mon") && heads[2].textContent.includes("Wed"),
+      heads.map(h => h.textContent.replace(/DAY \d/, "").trim()).join(" | "));
+    ok("the day that does not occur says so",
+      /not this week/.test(heads[5].textContent), heads[5].textContent);
+    ok("the caption explains the ordering",
+      /Columns start with this week's first school day/.test($("#glanceTerm").textContent));
+  }
+
+  /* A week whose Monday is a holiday still orders from the first day that runs. */
+  {
+    const { d, $ } = await load({ fakeNow: Date.UTC(2026, 9, 12, 12) });
+    $("#paste").value = DEMO_FULL; $("#btnParse").click(); await pause();
+    $("#btnBuild").click(); await pause(500);
+    const first = (d.querySelector("#atGlance thead th:nth-child(2)").textContent.match(/DAY (\d)/) || [])[1];
+    ok("a closed Monday is skipped for the ordering", first === "6", "starts at DAY " + first);
+  }
+}
+
 async function testGlance() {
   suite("at a glance");
   const { $ } = await load();
@@ -398,7 +430,7 @@ async function testPrintColour() {
 
 (async () => {
   const all = [testLoads, testEscaping, testTermWarning, testNotesClear, testTimeParsing,
-               testRecurringNoteDays, testGlance, testRanges, testRangesAfterYearEnd,
+               testRecurringNoteDays, testGlance, testGlanceOrder, testRanges, testRangesAfterYearEnd,
                testDebounce, testYearCalendar, testRightNow, testPrintColour];
   for (const t of all) {
     try { await t(); }

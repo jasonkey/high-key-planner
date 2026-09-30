@@ -318,13 +318,37 @@ function renderNow(){
   $("#nowCard").style.display="block";
 }
 
-/* ---------- at a glance ---------- */
+/* ---------- at a glance ----------
+   Six rotation days in a five-day week, so the cycle drifts: this week might run
+   Days 2-6, next week Days 1-5. Starting the columns at Day 1 regardless put the
+   one day that does not occur this week in the first column. Order them from this
+   week's first school day instead, and say which weekday each falls on. */
+function glanceOrder(){
+  const mon=nowWeekStart(todayISO()), weekday={};
+  let first=null;
+  for(let i=0;i<5;i++){
+    const d=B.addDays(mon,i), ds=B.iso(d), inf=B.dayInfo(ds);
+    if(inf.type!=="day") continue;
+    if(weekday[inf.dn]===undefined) weekday[inf.dn]=B.DOW[d.getUTCDay()].slice(0,3);
+    if(first===null) first=inf.dn;
+  }
+  if(first===null) first=1;              // a week with no school at all
+  const order=[];
+  for(let i=0;i<6;i++) order.push(((first-1+i)%6)+1);
+  return {order, weekday};
+}
+
 function renderGlance(){
   const gd=glanceDate(), sem=(gd>=D.sem2Start)?"S2":"S1";
+  const {order, weekday}=glanceOrder();
   let h='<table class="grid"><thead><tr><th class="rowlab"></th>';
-  for(let d=1;d<=6;d++) h+="<th>DAY "+d+"</th>";
+  order.forEach(dn=>{
+    const wd=weekday[dn];
+    h+="<th>DAY "+dn+(wd?'<span class="gwd">'+wd+"</span>"
+                        :'<span class="gwd gwdoff">not this week</span>')+"</th>";
+  });
   h+="</tr></thead><tbody>";
-  const R=[]; for(let d=1;d<=6;d++) R.push(B.resolveDay(d,gd));
+  const R=order.map(dn=>B.resolveDay(dn,gd));
   ROWS.forEach(([k,label])=>{
     h+='<tr><th class="rowlab">'+nl(label)+"</th>";
     for(let d=0;d<6;d++){
@@ -342,7 +366,8 @@ function renderGlance(){
   });
   $("#atGlance").innerHTML=h+"</tbody></table>";
   const other=B.COURSES.filter(r=>r.meets.length && r.term!=="FY" && r.term!==sem);
-  let cap="Showing "+(sem==="S2"?"Semester 2":"Semester 1")+", the courses that run on "+
+  let cap="Columns start with this week's first school day. Showing "+
+          (sem==="S2"?"Semester 2":"Semester 1")+", the courses that run on "+
           B.fmtLong(B.mkDate(gd))+".";
   if(other.length) cap+=" "+other.map(r=>r.desc).join(", ")+
     (other.length===1?" is":" are")+" in the other semester, so not in this grid — "+
