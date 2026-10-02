@@ -415,10 +415,18 @@ async function testDonationNote() {
   suite("the ask");
   const { d } = await load();
   const box = d.querySelector(".give");
-  ok("the note sits in the Good to know card", !!box && !!box.closest(".card"));
-  ok("it is above the bullets, not below",
-    !!box && !!(box.compareDocumentPosition(box.closest(".card").querySelector("ul")) &
-                d.defaultView.Node.DOCUMENT_POSITION_FOLLOWING));
+  ok("it is a card of its own", !!box && box.classList.contains("card"));
+
+  const goodToKnow = [...d.querySelectorAll(".card")].find(c => {
+    const step = c.querySelector(".step");
+    return step && /Good to know/.test(step.textContent);
+  });
+  ok("found the Good to know card", !!goodToKnow);
+  ok("the note is not inside it", !!box && !!goodToKnow && !goodToKnow.contains(box));
+  ok("and it comes before it on the page",
+    !!box && !!goodToKnow &&
+    !!(box.compareDocumentPosition(goodToKnow) & d.defaultView.Node.DOCUMENT_POSITION_FOLLOWING));
+  ok("it does not print", !!box && box.classList.contains("noprint"));
   const link = d.querySelector(".give a");
   ok("it links somewhere", !!link, link && link.textContent);
 

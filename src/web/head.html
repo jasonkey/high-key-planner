@@ -106,9 +106,9 @@ code.k{background:#eef1f4;padding:1px 5px;border-radius:4px;font-size:12.5px}
   .wk:last-child{page-break-after:auto;break-after:auto}
 }
 /* ---- the ask: who made this, and the Innovation Fund link ---- */
-.give{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;
-  background:#fffdfd;padding:12px 15px;margin:4px 0 16px}
-.give p{margin:0 0 8px;font-size:13.5px;line-height:1.65;color:var(--ink)}
+/* its own card, so .card supplies the frame — this only adds the accent edge */
+.card.give{border-left:4px solid var(--accent);background:#fffdfd}
+.give p{margin:0 0 9px;font-size:14px;line-height:1.65;color:var(--ink)}
 .give p:last-child{margin-bottom:0}
 .givelink{color:var(--accent);font-weight:700}
 
