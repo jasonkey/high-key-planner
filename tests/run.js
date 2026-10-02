@@ -411,6 +411,26 @@ async function testRightNow() {
   }
 }
 
+async function testDonationNote() {
+  suite("the ask");
+  const { d } = await load();
+  const box = d.querySelector(".give");
+  ok("the note sits in the Good to know card", !!box && !!box.closest(".card"));
+  ok("it is above the bullets, not below",
+    !!box && !!(box.compareDocumentPosition(box.closest(".card").querySelector("ul")) &
+                d.defaultView.Node.DOCUMENT_POSITION_FOLLOWING));
+  const link = d.querySelector(".give a");
+  ok("it links somewhere", !!link, link && link.textContent);
+
+  /* A dead href on a public page is worse than no link at all, and a placeholder
+     is exactly the kind of thing that ships by accident. */
+  const href = link ? link.getAttribute("href") : "";
+  ok("the link is a real URL, not a placeholder", /^https:\/\/\S+\.\S+/.test(href), href);
+  ok("it opens in a new tab without leaking the referrer",
+    link && link.getAttribute("target") === "_blank" &&
+    /noopener/.test(link.getAttribute("rel") || ""));
+}
+
 /* jsdom does not evaluate @media print, so this guards the rule itself. Without
    it the browser drops every background colour unless the reader happens to tick
    "Background graphics", and the printed week comes out as grey boxes.
@@ -431,7 +451,7 @@ async function testPrintColour() {
 (async () => {
   const all = [testLoads, testEscaping, testTermWarning, testNotesClear, testTimeParsing,
                testRecurringNoteDays, testGlance, testGlanceOrder, testRanges, testRangesAfterYearEnd,
-               testDebounce, testYearCalendar, testRightNow, testPrintColour];
+               testDebounce, testYearCalendar, testRightNow, testDonationNote, testPrintColour];
   for (const t of all) {
     try { await t(); }
     catch (e) { failures.push(t.name + " threw"); console.log("  FAIL  " + t.name + " threw — " + e.message); }
