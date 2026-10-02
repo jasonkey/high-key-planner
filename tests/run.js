@@ -437,6 +437,17 @@ async function testDonationNote() {
   ok("it opens in a new tab without leaking the referrer",
     link && link.getAttribute("target") === "_blank" &&
     /noopener/.test(link.getAttribute("rel") || ""));
+
+  const foot = d.querySelector(".pagefoot");
+  ok("the page ends with a bug-report address", !!foot &&
+    /report bugs or problems/.test(foot.textContent), foot && foot.textContent.trim());
+  const mail = foot && foot.querySelector('a[href^="mailto:"]');
+  ok("the address is a working mailto", !!mail &&
+    mail.getAttribute("href") === "mailto:erica@learningseeds.com");
+  /* It sits outside the cards, and the print rule only hides header.top,
+     .wrap > .card and .noprint — without its own class it would print on
+     every weekly page. */
+  ok("it stays off the printed pages", !!foot && foot.classList.contains("noprint"));
 }
 
 /* jsdom does not evaluate @media print, so this guards the rule itself. Without
