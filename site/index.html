@@ -55,7 +55,7 @@ button.mini{font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px;bac
 button.mini.add{border-style:dashed}
 table.week .cnotep{display:block;font-size:8.5px;color:#3d5166;font-style:italic;margin-top:1px}
 .grid .cnotep{display:block;font-size:10.5px;color:#3d5166;font-style:italic}
-.blk{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;
+.blk{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 5px;border-radius:6px;white-space:nowrap;
   background:var(--accentbg);color:var(--accent);font-weight:700;font-size:13px}
 .meets{font-size:12px;color:var(--muted);white-space:nowrap}
 .msg{margin-top:12px;padding:10px 12px;border-radius:7px;font-size:13.5px;display:none}
@@ -420,6 +420,18 @@ const DEPTS=["CE","EL","EN","FP","HR","ID","MA","PA","SC","SO","SW","TE","TU","V
 function deptOK(code){ return DEPTS.indexOf(String(code).slice(0,2).toUpperCase())>=0; }
 
 /* ---------------- parsing ---------------- */
+/* Day lists in the Schedule column use commas and ranges: "1-2,5" means days 1, 2 and 5.
+   Copy-paste and screenshot reading can turn the hyphen into an en or em dash, so accept all three. */
+const DAYLIST = "[\\d,\\-\u2013\u2014\\s]+";
+function expandDays(s){
+  const out=[];
+  String(s).replace(/\s+/g,"").split(",").forEach(part=>{
+    const r=part.match(/^(\d)[-\u2013\u2014](\d)$/);
+    if(r){ const a=+r[1], b=+r[2]; for(let d=Math.min(a,b); d<=Math.max(a,b); d++) out.push(d); }
+    else if(/^\d$/.test(part)) out.push(+part);
+  });
+  return out.filter((d,i)=>out.indexOf(d)===i);
+}
 function parseAspen(text){
   const codeRe = /(?:^|[^A-Z0-9])([A-Z]{2}[A-Z0-9]{2,8}-\d{2})(?![A-Z0-9])/g;
   const hits=[]; let m;
@@ -431,22 +443,25 @@ function parseAspen(text){
     const chunk = text.slice(h.end, i+1<hits.length ? hits[i+1].at : text.length)
                       .replace(/[\r\n\t]+/g," ").replace(/\s{2,}/g," ").trim();
     const termM  = chunk.match(/\b(FY|S1|S2|S3|Q[1-4])\b/);
-    const trackM = chunk.match(/\b([A-Z])\s*Block\b/) || chunk.match(/\b([A-G])\(([\d,]+)\)/);
+    // "C Block", or a shared block such as "E/D(2,4)" (some AP sciences take E plus half of D)
+    const trackM = chunk.match(/\b([A-Z])\s*Block\b/) ||
+                   chunk.match(new RegExp("\\b([A-G](?:\\s*\\/\\s*[A-G])*)\\s*\\(("+DAYLIST+")\\)"));
+    const track  = trackM ? trackM[1].replace(/\s+/g,"") : "";
     const NAME=/([A-Z][A-Za-z'’\-]+,\s*[A-Z](?:[A-Za-z'’\-]*\.?|\.))/;
     const teachM = chunk.match(new RegExp(NAME.source+"\\s*$")) || chunk.match(NAME);
     const meets=[]; let pm=null;
-    let re=/\b(\d)\(([\d,]+)\)/g, g;
+    let re=new RegExp("\\b(\\d)\\(("+DAYLIST+")\\)","g"), g;
     while((g=re.exec(chunk))!==null){
       const per=+g[1];
-      g[2].split(",").forEach(d=>{ const dn=+d; if(dn>=1&&dn<=6&&per>=1&&per<=5) meets.push({day:dn,per}); });
+      expandDays(g[2]).forEach(dn=>{ if(dn>=1&&dn<=6&&per>=1&&per<=5) meets.push({day:dn,per}); });
     }
-    const pmM = chunk.match(/\bPM\(([\d,]+)\)/);
-    if(pmM) pm = pmM[1].split(",").map(Number);
+    const pmM = chunk.match(new RegExp("\\bPM\\(("+DAYLIST+")\\)"));
+    if(pmM) pm = expandDays(pmM[1]);
     let desc = chunk.slice(0, termM ? termM.index : chunk.length).trim();
     desc = desc.replace(/\s*[-–]\s*$/,"").trim();
     if(!desc && teachM) desc = h.code;
     rows.push({code:h.code, desc:desc||h.code, term:(termM?termM[1]:"FY"),
-               track:(trackM?trackM[1]:""), teacher:(teachM?teachM[1]:""), room:"",
+               track:track, teacher:(teachM?teachM[1]:""), room:"",
                meets, pm});
   });
   return {rows};
@@ -463,11 +478,17 @@ function sessionsFor(r){
   return out.sort();
 }
 
+/* A course whose sessions fall in more than one block letter is a misread, unless Aspen
+   lists it as a shared block (e.g. "E/D(2,4)"); then every letter it uses must be one
+   Aspen named. */
 function splitRows(){
   return COURSES.filter(r=>{
     const letters={};
     (r.sessions||[]).forEach(s=>letters[s[0]]=1);
-    return Object.keys(letters).length>1;
+    const used=Object.keys(letters);
+    if(used.length<=1) return false;
+    const declared=String(r.track||"").split("/");
+    return !used.every(l=>declared.indexOf(l)>=0);
   });
 }
 function slotConflicts(){
