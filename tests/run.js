@@ -450,6 +450,51 @@ async function testDonationNote() {
   ok("it stays off the printed pages", !!foot && foot.classList.contains("noprint"));
 }
 
+/* Some AP sciences take one whole block plus half of another. Aspen writes them as
+   "E/D(2,4)" in the block column and uses day ranges in the Schedule column:
+   "3(1-2,5)" is period 3 on days 1, 2 and 5. The parser once read only commas, so a
+   range dropped that whole group: the course lost three classes and printed FREE in
+   their place, while its partner course got a false "more than one block" error.
+   Invented courses; same shape as the bug report. */
+async function testSharedBlocks() {
+  suite("shared AP science blocks and day ranges");
+  const { $, w } = await load();
+  const B = w.__BHS__;
+  const parse = async rows => { $("#paste").value = rows; $("#btnParse").click(); await pause(); };
+  const row = desc => B.COURSES.find(r => r.desc === desc);
+  const visible = el => el && el.style.display !== "none";
+
+  await parse([
+    "SC9100-01\tAP Physics\tFY\tE/D(2,4)\t3(1-2,5) 4(2,4,6)\tAmes, P.",
+    "SC9200-01\tAP Biology\tFY\tA/D(1,3)\t1(1,3,5) 2(1,4,6)\tBell, Q.",
+  ].join("\n"));
+  const phys = row("AP Physics"), bio = row("AP Biology");
+  ok("a day range reads every day in it",
+    phys && phys.sessions.join(",") === "D2,D4,E1,E2,E3,E4", phys && phys.sessions.join(","));
+  ok("the partner course keeps its own half of the shared block",
+    bio && bio.sessions.join(",") === "A1,A2,A3,A4,D1,D3", bio && bio.sessions.join(","));
+  ok("both block letters are kept as the label", phys && bio && phys.block === "E/D" && bio.block === "A/D",
+    phys && bio && phys.block + " / " + bio.block);
+  ok("a declared shared block raises no error", !visible($("#conflictNote")),
+    visible($("#conflictNote")) ? $("#conflictNote").textContent : "no warning");
+  const d1 = B.resolveDay(1, "2026-10-19"), d2 = B.resolveDay(2, "2026-10-20"), d5 = B.resolveDay(5, "2026-10-23");
+  ok("the range days print the class, not FREE",
+    [d1, d2, d5].every(r => r.cells.p3a.name === "AP Physics"),
+    [d1, d2, d5].map(r => r.cells.p3a.name).join(" | "));
+
+  await parse("SC9100-01\tAP Physics\tFY\tE/D(2,4)\t3(1–2,5) 4(2,4,6)\tAmes, P.");
+  ok("an en dash in a range reads the same as a hyphen",
+    row("AP Physics") && row("AP Physics").sessions.join(",") === "D2,D4,E1,E2,E3,E4");
+
+  await parse("MA9300-01\tCalculus\tFY\tC Block\t1(1) 2(2,5) 3(3,6)\tCole, R.");
+  ok("a one-block course landing in a second block is still flagged",
+    visible($("#conflictNote")) && /more than one block/.test($("#conflictNote").textContent));
+
+  await parse("SC9200-01\tAP Biology\tFY\tA/D(1,3)\t1(1,3,5) 2(1,4,6) 4(1)\tBell, Q.");
+  ok("a shared-block course straying outside its letters is still flagged",
+    visible($("#conflictNote")) && /more than one block/.test($("#conflictNote").textContent));
+}
+
 /* jsdom does not evaluate @media print, so this guards the rule itself. Without
    it the browser drops every background colour unless the reader happens to tick
    "Background graphics", and the printed week comes out as grey boxes.
@@ -469,7 +514,7 @@ async function testPrintColour() {
 
 (async () => {
   const all = [testLoads, testEscaping, testTermWarning, testNotesClear, testTimeParsing,
-               testRecurringNoteDays, testGlance, testGlanceOrder, testRanges, testRangesAfterYearEnd,
+               testRecurringNoteDays, testSharedBlocks, testGlance, testGlanceOrder, testRanges, testRangesAfterYearEnd,
                testDebounce, testYearCalendar, testRightNow, testDonationNote, testPrintColour];
   for (const t of all) {
     try { await t(); }
