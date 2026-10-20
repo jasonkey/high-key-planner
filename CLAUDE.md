@@ -33,7 +33,7 @@ python3 verify.py                           # audit; requires BOTH builds above 
 
 # Browser-side tests — drive the built site/index.html, so assemble.py first
 cd tests
-npm install && npm test                    # 51 assertions, no browser needed
+npm install && npm test                    # 103 assertions, no browser needed
 npm run print-check                        # needs Chrome + pdftoppm; not in CI
 ```
 

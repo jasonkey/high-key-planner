@@ -6,7 +6,7 @@ runs in a family's browser.
 
 ```bash
 npm install
-npm test            # 51 assertions, a few seconds, no browser needed
+npm test            # 103 assertions, a few seconds, no browser needed
 npm run print-check # needs Google Chrome and pdftoppm
 ```
 
